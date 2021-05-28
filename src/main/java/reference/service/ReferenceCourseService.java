@@ -1,10 +1,7 @@
 package reference.service;
 
 import cn.edu.sustech.cs307.database.SQLDataSource;
-import cn.edu.sustech.cs307.dto.Course;
-import cn.edu.sustech.cs307.dto.CourseSection;
-import cn.edu.sustech.cs307.dto.CourseSectionClass;
-import cn.edu.sustech.cs307.dto.Student;
+import cn.edu.sustech.cs307.dto.*;
 import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.CoursePrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.OrPrerequisite;
@@ -21,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
+
 import java.util.List;
 
 @ParametersAreNonnullByDefault
@@ -406,6 +404,68 @@ public class ReferenceCourseService implements CourseService {
 
     @Override
     public List<Student> getEnrolledStudentsInSemester(String courseId, int semesterId) {
-        return null;
+
+        Connection conn=null;
+        try{
+            conn=SQLDataSource.getInstance().getSQLConnection();
+            conn.setAutoCommit(false);
+
+            List<Student> result=new ArrayList<>();
+
+
+
+            String sql="select stu.userid as id, stu.firstname||' '||stu.lastname as fullname, stu.enrolleddate, " +
+                    "m.majorid as majorid, m.name as majorName, " +
+                    "d.departmentid as departmentId, d.name as departmentName " +
+                    " from coursesection " +
+                    "inner join studentcourseselection s on coursesection.sectionid = s.sectionid " +
+                    "inner join students as stu on stu.userid=s.studentid " +
+                    "inner join major m on m.majorid = stu.majorid " +
+                    "inner join department d on d.departmentid = m.departmentid "+
+                    "where courseid=? and semesterid=? ";
+            PreparedStatement p=conn.prepareStatement(sql);
+
+            p.setString(1,courseId);
+            p.setInt(2,semesterId);
+
+            ResultSet rs=p.executeQuery();
+            conn.commit();
+
+            while (rs.next()){
+                Student s=new Student();
+
+                s.id=rs.getInt(1);
+                s.fullName=rs.getString(2);
+                s.enrolledDate=rs.getDate(3);
+
+                Major m=new Major();
+                m.id=rs.getInt(4);
+                m.name=rs.getString(5);
+                s.major=m;
+
+                Department d=new Department();
+                d.id=rs.getInt(6);
+                d.name=rs.getString(7);
+                m.department=d;
+
+                result.add(s);
+            }
+
+            conn.close();
+
+            return result;
+
+        }catch (SQLException e){
+            try{
+                if(conn!=null){
+                    conn.rollback();
+                    conn.close();
+                }
+            }catch (SQLException ex){
+                ex.printStackTrace();
+            }
+            
+            throw new IntegrityViolationException();
+        }
     }
 }
