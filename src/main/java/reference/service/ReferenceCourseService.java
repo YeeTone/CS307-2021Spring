@@ -92,8 +92,6 @@ public class ReferenceCourseService implements CourseService {
                 preparedStatement.setString(2,course.courseID);
                 preparedStatement.setInt(3,groupId);
 
-                preparedStatement.addBatch();
-
             }else if(simplified instanceof AndPrerequisite){
                 AndPrerequisite and=(AndPrerequisite) simplified;
 
