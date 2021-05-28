@@ -92,6 +92,8 @@ public class ReferenceCourseService implements CourseService {
                 preparedStatement.setString(2,course.courseID);
                 preparedStatement.setInt(3,groupId);
 
+                preparedStatement.addBatch();
+
             }else if(simplified instanceof AndPrerequisite){
                 AndPrerequisite and=(AndPrerequisite) simplified;
 
@@ -104,8 +106,7 @@ public class ReferenceCourseService implements CourseService {
                         preparedStatement.addBatch();
                     }
                 }
-
-                preparedStatement.addBatch();
+                
             }else if(simplified instanceof OrPrerequisite){
                 OrPrerequisite or=(OrPrerequisite) simplified;
 
@@ -366,7 +367,7 @@ public class ReferenceCourseService implements CourseService {
     public List<CourseSectionClass> getCourseSectionClasses(int sectionId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             List<CourseSectionClass> result=new ArrayList<>();
-            
+
             String sql="select classid, i.userid as instructorId, i.firstname||' '||i.lastname as fullName" +
                     ",dayofweek,classbegin,classend,location,array_agg(week) as weekList " +
                     "from coursesectionclass " +
@@ -397,7 +398,7 @@ public class ReferenceCourseService implements CourseService {
                 csClass.location=rs.getString(7);
 
                 Array weekList=rs.getArray(8);
-                
+
                 List<Short>weeks=new ArrayList<>();
 
                 for (Object o:(Object[]) weekList.getArray()){
@@ -410,9 +411,9 @@ public class ReferenceCourseService implements CourseService {
                         }
                     }
                 }
-                
+
                 csClass.weekList=weeks;
-                
+
                 result.add(csClass);
             }
 
