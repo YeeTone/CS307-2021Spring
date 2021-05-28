@@ -4,8 +4,11 @@ create table if not exists course(
     credit integer,
     classHour integer,
     isPF bool,
-    coursePreId bigint
+    maxPrerequisiteGroupCount integer
 );
+
+/*alter table course drop coursePreId;
+alter table course add column maxPrerequisiteGroupCount integer;*/
 
 create table if not exists semester(
     name varchar(20),
@@ -82,10 +85,12 @@ create table if not exists student100Course(
     grade integer
 );
 
-create table if not exists prerequisite (
-    prerequisiteId serial primary key,
-    courseId varchar(50) references course(courseId) on delete cascade ,
-    fatherPrerequisiteId bigint,
-    typeName varchar(10)
+create table if not exists prerequisite
+(
+    id              serial primary key,
+    course_id       varchar(50) not null,
+    constraint fk1 foreign key (course_id) references course (courseId) on delete cascade ,
+    prerequisiteCourseId varchar(50) not null,
+    constraint fk2 foreign key (prerequisiteCourseId) references course (courseId) on delete cascade ,
+    group_id        integer     not null
 );
-
