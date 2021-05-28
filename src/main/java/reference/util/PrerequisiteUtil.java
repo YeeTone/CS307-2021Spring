@@ -8,14 +8,14 @@ import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
 import java.util.*;
 
 public class PrerequisiteUtil {
-    static HashMap<Prerequisite,BooleanTreeNode> correspondMap;
+    private static HashMap<Prerequisite,BooleanTreeNode> correspondMap;
 
 
     private PrerequisiteUtil(){
         throw new RuntimeException("No Util Instance for you!");
     }
 
-    public static void main(String[] args) {
+    /*public static void main(String[] args) {
         CoursePrerequisite ca=new CoursePrerequisite("A");
         CoursePrerequisite cb=new CoursePrerequisite("B");
         CoursePrerequisite cc=new CoursePrerequisite("C");
@@ -28,7 +28,7 @@ public class PrerequisiteUtil {
         Prerequisite root=transformPrerequisite(and3);
 
         System.out.println(getExpression(and3));
-        System.out.println(getExpression(root));*/
+        System.out.println(getExpression(root));
 
         AndPrerequisite and=new AndPrerequisite(Arrays.asList(ca,cb,cc,cd));
 
@@ -37,7 +37,7 @@ public class PrerequisiteUtil {
         System.out.println(getExpression(orx));
         System.out.println(getExpression(transformPrerequisite(orx)));
 
-    }
+    }*/
 
     public static int getGroupCount(Prerequisite simplifiedRoot){
         if(simplifiedRoot==null){
