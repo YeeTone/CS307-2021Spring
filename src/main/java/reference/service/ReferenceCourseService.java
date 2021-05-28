@@ -78,12 +78,16 @@ public class ReferenceCourseService implements CourseService {
             return;
         }
 
-        try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
+        Connection conn=null;
+
+        try{
+            conn=SQLDataSource.getInstance().getSQLConnection();
             String sql="insert into prerequisite" +
                     "(course_id, prerequisitecourseid, group_id)" +
                     " values(?,?,?); ";
             PreparedStatement preparedStatement=conn.prepareStatement(sql);
-            //conn.setAutoCommit(false);
+            conn.setAutoCommit(false);
+
 
             int groupId=1;
             if(simplified instanceof CoursePrerequisite){
@@ -93,7 +97,7 @@ public class ReferenceCourseService implements CourseService {
                 preparedStatement.setString(2,course.courseID);
                 preparedStatement.setInt(3,groupId);
 
-                preparedStatement.executeUpdate();
+                preparedStatement.addBatch();
 
             }else if(simplified instanceof AndPrerequisite){
                 AndPrerequisite and=(AndPrerequisite) simplified;
@@ -104,11 +108,11 @@ public class ReferenceCourseService implements CourseService {
                         preparedStatement.setString(1,courseId);
                         preparedStatement.setString(2,course.courseID);
                         preparedStatement.setInt(3,groupId);
-                        preparedStatement.executeUpdate();
+                        preparedStatement.addBatch();
                     }
                 }
 
-                preparedStatement.executeUpdate();
+                preparedStatement.addBatch();
             }else if(simplified instanceof OrPrerequisite){
                 OrPrerequisite or=(OrPrerequisite) simplified;
 
@@ -123,7 +127,7 @@ public class ReferenceCourseService implements CourseService {
                                     preparedStatement.setString(1,courseId);
                                     preparedStatement.setString(2,course.courseID);
                                     preparedStatement.setInt(3,groupId);
-                                    preparedStatement.executeUpdate();
+                                    preparedStatement.addBatch();
                                 }catch (SQLException e){
                                     e.printStackTrace();
                                     groupId--;
@@ -135,8 +139,20 @@ public class ReferenceCourseService implements CourseService {
                     }
                 }
             }
-            //conn.commit();
+            preparedStatement.executeBatch();
+
+
+            conn.commit();
+            conn.close();
         }catch (SQLException e){
+            try{
+                if(conn!=null){
+                    conn.rollback();
+                    conn.close();
+                }
+            }catch (SQLException ex){
+                e.printStackTrace();
+            }
 
             e.printStackTrace();
             throw new IntegrityViolationException();
