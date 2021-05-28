@@ -12,10 +12,7 @@ import reference.util.PrerequisiteUtil;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 
@@ -359,7 +356,7 @@ public class ReferenceCourseService implements CourseService {
                                 : Course.CourseGrading.HUNDRED_MARK_SCORE;
                 return c;
             }else{
-                return null;
+                throw new IntegrityViolationException();
             }
 
         }catch (SQLException e){
@@ -369,7 +366,63 @@ public class ReferenceCourseService implements CourseService {
 
     @Override
     public List<CourseSectionClass> getCourseSectionClasses(int sectionId) {
-        return null;
+        try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
+            List<CourseSectionClass> result=new ArrayList<>();
+            
+            String sql="select classid, i.userid as instructorId, i.firstname||' '||i.lastname as fullName" +
+                    ",dayofweek,classbegin,classend,location,array_agg(week) as weekList " +
+                    "from coursesectionclass " +
+                    "inner join instructor i on i.userid = coursesectionclass.instructorid where sectionid=? " +
+                    "group by classid,instructorId,fullName,instructorid,dayofweek,classbegin,classend,location";
+            PreparedStatement p= conn.prepareStatement(sql);
+
+            p.setInt(1,sectionId);
+
+            ResultSet rs=p.executeQuery();
+
+            while (rs.next()){
+                CourseSectionClass csClass=new CourseSectionClass();
+                Instructor instructor=new Instructor();
+
+                csClass.id=rs.getInt(1);
+
+                instructor.id=rs.getInt(2);
+                instructor.fullName=rs.getString(3);
+
+                csClass.instructor=instructor;
+
+                csClass.dayOfWeek= DayOfWeek.of(rs.getInt(4));
+
+                csClass.classBegin=(short) rs.getInt(5);
+                csClass.classEnd=(short) rs.getInt(6);
+
+                csClass.location=rs.getString(7);
+
+                Array weekList=rs.getArray(8);
+                
+                List<Short>weeks=new ArrayList<>();
+
+                for (Object o:(Object[]) weekList.getArray()){
+                    if(o instanceof Number){
+                        try{
+                            short s=(Short)o;
+                            weeks.add(s);
+                        }catch (Exception e){
+                            break;
+                        }
+                    }
+                }
+                
+                csClass.weekList=weeks;
+                
+                result.add(csClass);
+            }
+
+            return result;
+        }catch (SQLException e){
+            e.printStackTrace();
+            throw new IntegrityViolationException();
+        }
     }
 
     @Override
@@ -464,7 +517,7 @@ public class ReferenceCourseService implements CourseService {
             }catch (SQLException ex){
                 ex.printStackTrace();
             }
-            
+
             throw new IntegrityViolationException();
         }
     }
