@@ -6,6 +6,7 @@ import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.CoursePrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.OrPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
+import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.CourseService;
 import reference.util.PrerequisiteUtil;
@@ -236,7 +237,7 @@ public class ReferenceCourseService implements CourseService {
                     if(rs.next()){
                         classId =rs.getInt(8);
                     }else {
-                        throw new IntegrityViolationException();
+                        throw new EntityNotFoundException();
                     }
 
                 }
@@ -332,7 +333,11 @@ public class ReferenceCourseService implements CourseService {
 
                 result.add(c);
             }
-            return result;
+            if(result.isEmpty()){
+                throw new EntityNotFoundException();
+            }else {
+                return result;
+            }
         }catch (SQLException e){
             e.printStackTrace();
             return result;
@@ -367,7 +372,13 @@ public class ReferenceCourseService implements CourseService {
                 result.add(cs);
             }
 
-            return result;
+            if(result.isEmpty()){
+                throw new EntityNotFoundException();
+            }else {
+                return result;
+            }
+
+
         }catch (SQLException e){
             e.printStackTrace();
             throw new IntegrityViolationException();
@@ -397,7 +408,7 @@ public class ReferenceCourseService implements CourseService {
                                 : Course.CourseGrading.HUNDRED_MARK_SCORE;
                 return c;
             }else{
-                throw new IntegrityViolationException();
+                throw new EntityNotFoundException();
             }
 
         }catch (SQLException e){
@@ -459,7 +470,13 @@ public class ReferenceCourseService implements CourseService {
                 result.add(csClass);
             }
 
-            return result;
+            if(result.isEmpty()){
+                throw new EntityNotFoundException();
+            }else {
+                return result;
+            }
+
+
         }catch (SQLException e){
             e.printStackTrace();
             throw new IntegrityViolationException();
@@ -488,7 +505,7 @@ public class ReferenceCourseService implements CourseService {
 
                 return cs;
             }else {
-                throw new SQLException();
+                throw new EntityNotFoundException();
             }
         }catch (SQLException e){
             e.printStackTrace();
@@ -547,8 +564,11 @@ public class ReferenceCourseService implements CourseService {
 
             conn.close();
 
-            return result;
-
+            if(result.isEmpty()){
+                throw new EntityNotFoundException();
+            }else {
+                return result;
+            }
         }catch (SQLException e){
             try{
                 if(conn!=null){
