@@ -39,9 +39,8 @@ create table if not exists courseSectionClass (
     classBegin integer,
     classEnd integer,
     location varchar(50),
-    classId serial primary key
+    classId serial
 );
-
 create table if not exists department (
     name varchar(50),
     departmentId serial primary key
