@@ -1,4 +1,5 @@
-package Reference;
+
+package reference.service;
 
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Major;
