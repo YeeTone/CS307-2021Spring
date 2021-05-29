@@ -3,6 +3,8 @@ package reference.test;
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Course;
 import cn.edu.sustech.cs307.dto.CourseSection;
+import cn.edu.sustech.cs307.dto.CourseSectionClass;
+import cn.edu.sustech.cs307.dto.Instructor;
 import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.CoursePrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.OrPrerequisite;
@@ -17,7 +19,6 @@ import java.sql.*;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class CourseServiceTest {
@@ -31,10 +32,10 @@ public class CourseServiceTest {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        getCourseSectionsInSemesterTest();
+        getCourseSectionClassesTest();
     }
 
-    public static void addCourseTest(){
+    private static void addCourseTest(){
 
         COURSE_SERVICE.addCourse("CS102A","JavaA",3,64,
                 Course.CourseGrading.HUNDRED_MARK_SCORE,null);
@@ -62,7 +63,7 @@ public class CourseServiceTest {
                 Course.CourseGrading.HUNDRED_MARK_SCORE,or3);
     }
 
-    public static int addCourseSectionTest(){
+    private static int addCourseSectionTest(){
 
         COURSE_SERVICE.addCourse("CS102A","JavaA",3,64,
                 Course.CourseGrading.HUNDRED_MARK_SCORE,null);
@@ -73,7 +74,7 @@ public class CourseServiceTest {
         return COURSE_SERVICE.addCourseSection("CS102A",fall2020,"Lecture",175);
     }
 
-    public static int addCourseSectionClassTest(){
+    private static int addCourseSectionClassTest(){
         INSTRUCTOR_SERVICE.addInstructor(11910104,"YeeTone","WANG");
 
         COURSE_SERVICE.addCourse("CS102A","JavaA",3
@@ -185,6 +186,76 @@ public class CourseServiceTest {
         answer.add(cs102a_20Spring_lab);
 
         List<CourseSection> result=COURSE_SERVICE.getCourseSectionsInSemester("CS102A",spring2020);
+
+        System.out.println(answer.equals(result));
+
+    }
+
+    private static void getCourseBySectionTest(){
+        COURSE_SERVICE.addCourse("CS102A","JavaA",3,64,
+                Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+
+        CoursePrerequisite cp=new CoursePrerequisite("CS102A");
+
+        COURSE_SERVICE.addCourse("CS203","DSAA",3,64,
+                Course.CourseGrading.HUNDRED_MARK_SCORE,cp);
+        int fall2020=SEMESTER_SERVICE.addSemester("2020Fall",Date.valueOf("2020-09-01"),Date.valueOf("2021-02-01"));
+
+        int dsaaLab1=COURSE_SERVICE.addCourseSection("CS203",fall2020,"DSAA Lab1",50);
+
+        Course dsaa=new Course();
+        dsaa.credit=3;
+        dsaa.id="CS203";
+        dsaa.classHour=64;
+        dsaa.name="DSAA";
+        dsaa.grading= Course.CourseGrading.HUNDRED_MARK_SCORE;
+
+        System.out.println(dsaa.equals(COURSE_SERVICE.getCourseBySection(dsaaLab1)));
+    }
+
+    private static void getCourseSectionClassesTest(){
+        COURSE_SERVICE.addCourse("CS102A","JavaA",3,
+                64, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+        int fall2020=SEMESTER_SERVICE.addSemester("2020Fall",Date.valueOf("2020-09-01"),Date.valueOf("2021-02-01"));
+
+        int fall2020Lecture=COURSE_SERVICE.addCourseSection("CS102A",fall2020,"Lecture",160);
+        INSTRUCTOR_SERVICE.addInstructor(11910104,"YeeTone","WANG");
+
+        List<Short>singleWeek=Arrays.asList(new Short[]{1,3,5,7,9,11,13,15});
+        int sectionClassId1=COURSE_SERVICE.addCourseSectionClass(fall2020Lecture,11910104,
+                DayOfWeek.MONDAY,singleWeek,(short) 3,(short) 4,"217Room");
+
+        List<Short>fullWeek=Arrays.asList(new Short[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16});
+
+        int sectionClassId2=COURSE_SERVICE.addCourseSectionClass(fall2020Lecture,11910104,
+                DayOfWeek.TUESDAY,fullWeek,(short) 5,(short) 6,"218Room");
+
+        List<CourseSectionClass> answer=new ArrayList<>();
+        Instructor yeetone=new Instructor();
+        yeetone.id=11910104;
+        yeetone.fullName="YeeTone WANG";
+
+        CourseSectionClass c1=new CourseSectionClass();
+        c1.weekList=singleWeek;
+        c1.id=sectionClassId1;
+        c1.location="217Room";
+        c1.dayOfWeek=DayOfWeek.MONDAY;
+        c1.classBegin=3;
+        c1.classEnd=4;
+        c1.instructor=yeetone;
+        answer.add(c1);
+
+        CourseSectionClass c2=new CourseSectionClass();
+        c2.weekList=fullWeek;
+        c2.id=sectionClassId2;
+        c2.location="218Room";
+        c2.dayOfWeek=DayOfWeek.TUESDAY;
+        c2.classBegin=5;
+        c2.classEnd=6;
+        c2.instructor=yeetone;
+        answer.add(c2);
+
+        List<CourseSectionClass> result=COURSE_SERVICE.getCourseSectionClasses(fall2020Lecture);
 
         System.out.println(answer.equals(result));
 
