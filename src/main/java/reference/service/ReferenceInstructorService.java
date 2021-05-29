@@ -14,7 +14,7 @@ import java.util.List;
 
 public class ReferenceInstructorService implements InstructorService {
     @Override
-    public int addInstructor(int userId, String firstName, String lastName) {
+    public void addInstructor(int userId, String firstName, String lastName) {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
             String sql1 = "insert into instructor" +
                     "(userId, firstName, lastName)" +
@@ -24,8 +24,7 @@ public class ReferenceInstructorService implements InstructorService {
             preparedStatement.setString(2, firstName);
             preparedStatement.setString(3, lastName);
             preparedStatement.executeUpdate();
-            ResultSet resultSet = preparedStatement.executeQuery();
-            return resultSet.getInt(1);
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new IntegrityViolationException();

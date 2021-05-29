@@ -6,6 +6,7 @@ import cn.edu.sustech.cs307.dto.Major;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.MajorService;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,6 +14,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+@ParametersAreNonnullByDefault
 public class ReferenceMajorService implements MajorService {
     @Override
     public int addMajor(String name, int departmentId) {
@@ -33,7 +35,7 @@ public class ReferenceMajorService implements MajorService {
     }
 
     @Override
-    public void removeMajor(int majorId) throws SQLException {
+    public void removeMajor(int majorId) {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
             String sql1 = "delete from major where majorId = ?";
             PreparedStatement preparedStatement = con.prepareStatement(sql1);
@@ -74,7 +76,7 @@ public class ReferenceMajorService implements MajorService {
     }
 
     @Override
-    public cn.edu.sustech.cs307.dto.Major getMajor(int majorId) {
+    public Major getMajor(int majorId) {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
             Major major = new Major();
             String sql1 = "select * from major where majorId = ?";

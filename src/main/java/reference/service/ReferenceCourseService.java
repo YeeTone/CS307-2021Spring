@@ -68,7 +68,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     private void insertPrerequisite(String courseId, @Nullable Prerequisite simplified){
-        System.out.println(simplified);
+        //System.out.println(simplified);
         if(simplified==null){
             return;
         }
@@ -106,7 +106,7 @@ public class ReferenceCourseService implements CourseService {
                         preparedStatement.addBatch();
                     }
                 }
-                
+
             }else if(simplified instanceof OrPrerequisite){
                 OrPrerequisite or=(OrPrerequisite) simplified;
 
@@ -145,57 +145,80 @@ public class ReferenceCourseService implements CourseService {
                     conn.close();
                 }
             }catch (SQLException ex){
-                e.printStackTrace();
+                ex.printStackTrace();
             }
 
             e.printStackTrace();
             throw new IntegrityViolationException();
         }
 
-
-
-
     }
 
     @Override
     public int addCourseSection(String courseId, int semesterId, String sectionName, int totalCapacity) {
 
-        try(Connection con= SQLDataSource.getInstance().getSQLConnection()){
+        Connection conn = null;
+        try{
+            conn =SQLDataSource.getInstance().getSQLConnection();
+            conn.setAutoCommit(false);
+
             String sql
                     ="insert into coursesection" +
                     "(courseId, semesterId, sectionName, totalCapacity)" +
-                    " values(?,?,?,?);";
+                    "values(?, ?, ?, ?);";
 
-            PreparedStatement preparedStatement=con.prepareStatement(sql);
+            PreparedStatement preparedStatement= conn.prepareStatement(sql,PreparedStatement.RETURN_GENERATED_KEYS);
 
             preparedStatement.setString(1,courseId);
             preparedStatement.setInt(2,semesterId);
             preparedStatement.setString(3,sectionName);
             preparedStatement.setInt(4,totalCapacity);
 
-            preparedStatement.executeUpdate(sql,PreparedStatement.RETURN_GENERATED_KEYS);
+            preparedStatement.executeUpdate();
 
             ResultSet rs= preparedStatement.getGeneratedKeys();
 
             if(rs.next()){
-                return rs.getInt(3);
+
+                int result=rs.getInt(3);
+                conn.commit();
+                conn.close();
+
+                return result;
             }else {
+                conn.commit();
+                conn.close();
+
                 throw new IntegrityViolationException();
             }
         }catch (SQLException e){
+            try{
+                if(conn !=null){
+                    conn.rollback();
+                    conn.close();
+                }
+            }catch (SQLException ex){
+                ex.printStackTrace();
+            }
+
+            e.printStackTrace();
             throw new IntegrityViolationException();
         }
     }
+
+
 
     @Override
     public int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek,
                                      List<Short> weekList, short classStart,
                                      short classEnd, String location) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
+            adjustSequenceVal(conn);
+
             String sql="insert into coursesectionclass" +
-                    "(sectionid, instructorid, dayofweek, week, classbegin, classend, location) " +
-                    "values (?,?,?,?,?,?,?);";
-            PreparedStatement p=conn.prepareStatement(sql);
+                    "(sectionid, instructorid, dayofweek, week, classbegin, classend, location,classid) " +
+                    "values (?,?,?,?,?,?,?,currval('coursesectionclass_classid_seq'));";
+            PreparedStatement p=conn.prepareStatement(sql,PreparedStatement.RETURN_GENERATED_KEYS);
 
             p.setInt(1,sectionId);
             p.setInt(2,instructorId);
@@ -210,13 +233,29 @@ public class ReferenceCourseService implements CourseService {
                 p.executeUpdate();
                 if(classId ==-1){
                     ResultSet rs=p.getGeneratedKeys();
-                    classId =rs.getInt(8);
+                    if(rs.next()){
+                        classId =rs.getInt(8);
+                    }else {
+                        throw new IntegrityViolationException();
+                    }
+
                 }
             }
 
             return classId;
         }catch (SQLException e){
+            e.printStackTrace();
             throw new IntegrityViolationException();
+        }
+    }
+
+    private void adjustSequenceVal(Connection conn){
+        try{
+            String getNextSQL="select nextval('coursesectionclass_classid_seq');";
+            PreparedStatement p= conn.prepareStatement(getNextSQL);
+            p.executeQuery();
+        }catch (SQLException e){
+            e.printStackTrace();
         }
     }
 
@@ -305,13 +344,16 @@ public class ReferenceCourseService implements CourseService {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             List<CourseSection> result=new ArrayList<>();
 
-            String sql="select cs2.sectionid, cs2.sectionname, cs2.totalcapacity, count(s.studentid) from coursesection as cs2 " +
-                    "inner join studentcourseselection as s on cs2.sectionid = s.sectionid " +
+            String sql="select cs2.sectionid, cs2.sectionname, cs2.totalcapacity, count(s.studentid) " +
+                    "from coursesection as cs2 " +
+                    "left outer join studentcourseselection as s on cs2.sectionid = s.sectionid " +
                     "where courseid=? and semesterid=? group by s.studentid,cs2.sectionid;";
             PreparedStatement p=conn.prepareStatement(sql);
 
             p.setString(1,courseId);
             p.setInt(2,semesterId);
+
+            System.out.println(p);
 
             ResultSet rs=p.executeQuery();
 
