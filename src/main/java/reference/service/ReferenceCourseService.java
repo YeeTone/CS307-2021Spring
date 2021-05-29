@@ -425,7 +425,7 @@ public class ReferenceCourseService implements CourseService {
                     ",dayofweek,classbegin,classend,location,array_agg(week) as weekList " +
                     "from coursesectionclass " +
                     "inner join instructor i on i.userid = coursesectionclass.instructorid where sectionid=? " +
-                    "group by classid,instructorId,fullName,instructorid,dayofweek,classbegin,classend,location";
+                    "group by classid,instructorId,fullName,i.userid,dayofweek,classbegin,classend,location";
             PreparedStatement p= conn.prepareStatement(sql);
 
             p.setInt(1,sectionId);
@@ -457,9 +457,11 @@ public class ReferenceCourseService implements CourseService {
                 for (Object o:(Object[]) weekList.getArray()){
                     if(o instanceof Number){
                         try{
-                            short s=(Short)o;
+                            int x=(int)o;
+                            short s=(short)x;
                             weeks.add(s);
                         }catch (Exception e){
+                            e.printStackTrace();
                             break;
                         }
                     }
