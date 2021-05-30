@@ -7,12 +7,11 @@ import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
 
 import java.util.*;
 
-public class PrerequisiteUtil {
+public class PrerequisiteUtil extends Util{
     private static HashMap<Prerequisite,BooleanTreeNode> correspondMap;
 
-
     private PrerequisiteUtil(){
-        throw new RuntimeException("No Util Instance for you!");
+        super();
     }
 
     /*public static void main(String[] args) {
@@ -21,14 +20,14 @@ public class PrerequisiteUtil {
         CoursePrerequisite cc=new CoursePrerequisite("C");
         CoursePrerequisite cd=new CoursePrerequisite("D");
 
-        /*AndPrerequisite and1=new AndPrerequisite(Arrays.asList(ca,cb));
+        *//*AndPrerequisite and1=new AndPrerequisite(Arrays.asList(ca,cb));
         OrPrerequisite or2=new OrPrerequisite(Arrays.asList(and1,cc));
         AndPrerequisite and3=new AndPrerequisite(Arrays.asList(or2,cd));
 
         Prerequisite root=transformPrerequisite(and3);
 
         System.out.println(getExpression(and3));
-        System.out.println(getExpression(root));
+        System.out.println(getExpression(root));*//*
 
         AndPrerequisite and=new AndPrerequisite(Arrays.asList(ca,cb,cc,cd));
 

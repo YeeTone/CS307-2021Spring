@@ -3,14 +3,12 @@ package reference.service;
 
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Major;
+import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.MajorService;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,12 +20,18 @@ public class ReferenceMajorService implements MajorService {
             String sql1 = "insert into major" +
                     "(name, departmentId)" +
                     "values (?, ?)";
-            PreparedStatement preparedStatement = con.prepareStatement(sql1);
+            PreparedStatement preparedStatement = con.prepareStatement(sql1, PreparedStatement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, name);
             preparedStatement.setInt(2, departmentId);
             preparedStatement.executeUpdate();
             ResultSet resultSet = preparedStatement.getGeneratedKeys();
-            return resultSet.getInt(1);
+            if(resultSet.next()){
+                return resultSet.getInt(1);
+            }else {
+                throw new EntityNotFoundException();
+            }
+
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new IntegrityViolationException();

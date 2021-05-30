@@ -3,6 +3,7 @@ package reference.service;
 
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Department;
+import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.DepartmentService;
 
@@ -21,11 +22,16 @@ public class ReferenceDepartmentService implements DepartmentService {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
             String sql1 = "insert into department" +
                     "(name)" + "values (?)";
-            PreparedStatement preparedStatement = con.prepareStatement(sql1);
+            PreparedStatement preparedStatement = con.prepareStatement(sql1,PreparedStatement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, name);
             preparedStatement.executeUpdate();
             ResultSet resultSet = preparedStatement.getGeneratedKeys();
-            return resultSet.getInt(2);
+            if(resultSet.next()){
+                return resultSet.getInt(2);
+            }else {
+                throw new EntityNotFoundException();
+            }
+
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             throw new IntegrityViolationException();
