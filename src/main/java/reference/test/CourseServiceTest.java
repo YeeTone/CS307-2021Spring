@@ -1,38 +1,36 @@
 package reference.test;
 
-import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Course;
 import cn.edu.sustech.cs307.dto.CourseSection;
 import cn.edu.sustech.cs307.dto.CourseSectionClass;
 import cn.edu.sustech.cs307.dto.Instructor;
+import cn.edu.sustech.cs307.dto.grade.PassOrFailGrade;
 import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.CoursePrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.OrPrerequisite;
-import cn.edu.sustech.cs307.service.CourseService;
-import cn.edu.sustech.cs307.service.InstructorService;
-import cn.edu.sustech.cs307.service.SemesterService;
-import reference.service.ReferenceCourseService;
-import reference.service.ReferenceInstructorService;
-import reference.service.ReferenceSemesterService;
+import cn.edu.sustech.cs307.service.*;
+import reference.service.*;
+import reference.util.DatabaseClearUtil;
 
 import java.sql.*;
+import java.sql.Date;
 import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class CourseServiceTest {
 
     private static final CourseService COURSE_SERVICE =new ReferenceCourseService();
     private static final SemesterService SEMESTER_SERVICE =new ReferenceSemesterService();
     private static final InstructorService INSTRUCTOR_SERVICE=new ReferenceInstructorService();
+    private static final DepartmentService DEPARTMENT_SERVICE=new ReferenceDepartmentService();
+    private static final MajorService MAJOR_SERVICE=new ReferenceMajorService();
+    private static final StudentService STUDENT_SERVICE=new ReferenceStudentService();
 
     static {
-        deleteAll_only_beginning();
+        DatabaseClearUtil.clearDatabase();
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        getCourseSectionClassesTest();
+    public static void main(String[] args){
     }
 
     private static void addCourseTest(){
@@ -86,12 +84,12 @@ public class CourseServiceTest {
         int cs102aLab=COURSE_SERVICE.addCourseSection("CS102A",fall2020,"Lab",45);
 
         Short[]week=new Short[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
-        List<Short> weekList=Arrays.asList(week);
+        Set<Short> weekSet=new HashSet<>(Arrays.asList(week));
 
         int classId=COURSE_SERVICE.addCourseSectionClass(cs102aLecture,11910104,
-                DayOfWeek.MONDAY,weekList,(short) 3,(short) 4,"217Room");
+                DayOfWeek.MONDAY,weekSet,(short) 3,(short) 4,"217Room");
 
-        COURSE_SERVICE.addCourseSectionClass(cs102aLab,11910104,DayOfWeek.THURSDAY,weekList,(short) 5,(short) 6,
+        COURSE_SERVICE.addCourseSectionClass(cs102aLab,11910104,DayOfWeek.THURSDAY,weekSet,(short) 5,(short) 6,
                 "217Room");
 
         return classId;
@@ -221,11 +219,13 @@ public class CourseServiceTest {
         int fall2020Lecture=COURSE_SERVICE.addCourseSection("CS102A",fall2020,"Lecture",160);
         INSTRUCTOR_SERVICE.addInstructor(11910104,"YeeTone","WANG");
 
-        List<Short>singleWeek=Arrays.asList(new Short[]{1,3,5,7,9,11,13,15});
+        //List<Short>singleWeek=Arrays.asList(new Short[]{1,3,5,7,9,11,13,15});
+        Set<Short> singleWeek=new HashSet<>(Arrays.asList(new Short[]{1,3,5,7,9,11,13,15}));
         int sectionClassId1=COURSE_SERVICE.addCourseSectionClass(fall2020Lecture,11910104,
                 DayOfWeek.MONDAY,singleWeek,(short) 3,(short) 4,"217Room");
 
-        List<Short>fullWeek=Arrays.asList(new Short[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16});
+        //List<Short>fullWeek=Arrays.asList(new Short[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16});
+        Set<Short>fullWeek=new HashSet<>(Arrays.asList(new Short[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}));
 
         int sectionClassId2=COURSE_SERVICE.addCourseSectionClass(fall2020Lecture,11910104,
                 DayOfWeek.TUESDAY,fullWeek,(short) 5,(short) 6,"218Room");
@@ -261,27 +261,7 @@ public class CourseServiceTest {
 
     }
 
-    private static void deleteAll_only_beginning(){
-        try(Connection conn= SQLDataSource.getInstance().getSQLConnection()){
-            String[]sqls={"delete from prerequisite;",
-                    "delete from course;",
-                    "delete from semester;",
-                    "delete from instructor;",
-                    "delete from coursesection;",
-                    "delete from coursesectionclass;",
-                    "alter sequence prerequisite_id_seq restart with 1;",
-                    "alter sequence coursesection_sectionid_seq restart with 1;",
-                    "alter sequence semester_semesterid_seq restart with 1;",
-                    "alter sequence coursesectionclass_classid_seq restart with 1;"
-                    };
 
-            for (String s:sqls){
-                PreparedStatement p=conn.prepareStatement(s);
-                p.executeUpdate();
-            }
-        }catch (SQLException e){
-            e.printStackTrace();
-        }
-    }
+
 
 }
