@@ -1,9 +1,6 @@
 package reference.test;
 
-import cn.edu.sustech.cs307.dto.Course;
-import cn.edu.sustech.cs307.dto.CourseSection;
-import cn.edu.sustech.cs307.dto.CourseSectionClass;
-import cn.edu.sustech.cs307.dto.Instructor;
+import cn.edu.sustech.cs307.dto.*;
 import cn.edu.sustech.cs307.dto.grade.PassOrFailGrade;
 import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.CoursePrerequisite;
@@ -31,6 +28,7 @@ public class CourseServiceTest {
     }
 
     public static void main(String[] args){
+        getEnrolledStudentsInSemesterTest();
     }
 
     private static void addCourseTest(){
@@ -261,7 +259,63 @@ public class CourseServiceTest {
 
     }
 
+    private static void getEnrolledStudentsInSemesterTest(){
+        int cse=DEPARTMENT_SERVICE.addDepartment("CSE");
+        int cs=MAJOR_SERVICE.addMajor("CS",cse);
 
+        int math=DEPARTMENT_SERVICE.addDepartment("MATH");
+        int ma=MAJOR_SERVICE.addMajor("MA",math);
+
+        STUDENT_SERVICE.addStudent(11910104,cs,"YeeTone","WANG",Date.valueOf("2019-08-15"));
+        STUDENT_SERVICE.addStudent(11610100,ma,"王","融",Date.valueOf("2016-08-15"));
+
+        COURSE_SERVICE.addCourse("CS203","DSAA",3,64,
+                Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+        int fall2020=SEMESTER_SERVICE.addSemester("2020Fall",Date.valueOf("2020-08-15"),Date.valueOf("2021-01-15"));
+
+        int dsaaLab1=COURSE_SERVICE.addCourseSection("CS203",fall2020,"Lab1",50);
+        StudentService.EnrollResult enroll1= STUDENT_SERVICE.enrollCourse(11910104,dsaaLab1);
+        StudentService.EnrollResult enroll2=STUDENT_SERVICE.enrollCourse(11610100,dsaaLab1);
+
+        System.out.println(enroll1);
+        System.out.println(enroll2);
+
+        Department csDepartment=new Department();
+        csDepartment.name="CSE";
+        csDepartment.id=cse;
+        Major csMajor=new Major();
+        csMajor.name="CS";
+        csMajor.id =cs;
+        csMajor.department=csDepartment;
+
+        Department mathDepartment=new Department();
+        mathDepartment.name="MATH";
+        mathDepartment.id=math;
+        Major maMajor=new Major();
+        maMajor.name="MA";
+        maMajor.id=ma;
+        maMajor.department=mathDepartment;
+
+        Student s1=new Student();
+        s1.major=csMajor;
+        s1.fullName="YeeTone WANG";
+        s1.id=11910104;
+        s1.enrolledDate=Date.valueOf("2019-08-15");
+
+        Student s2=new Student();
+        s2.major=maMajor;
+        s2.fullName="王融";
+        s2.id=11610100;
+        s2.enrolledDate=Date.valueOf("2016-08-15");
+
+        List<Student> answer=new ArrayList<>();
+        answer.add(s1);
+        answer.add(s2);
+
+        List<Student> result=COURSE_SERVICE.getEnrolledStudentsInSemester("CS203",fall2020);
+
+        System.out.println(answer.equals(result));
+    }
 
 
 }
