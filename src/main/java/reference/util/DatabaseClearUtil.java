@@ -21,13 +21,16 @@ public class DatabaseClearUtil extends Util{
                     "delete from coursesectionclass;",
                     "delete from major",
                     "delete from students",
+                    "delete from department",
                     "delete from studentcourseselection",
                     "delete from student100course",
                     "delete from studentpfcourse",
                     "alter sequence prerequisite_id_seq restart with 1;",
                     "alter sequence coursesection_sectionid_seq restart with 1;",
                     "alter sequence semester_semesterid_seq restart with 1;",
-                    "alter sequence coursesectionclass_classid_seq restart with 1;"
+                    "alter sequence coursesectionclass_classid_seq restart with 1;",
+                    "alter sequence major_majorid_seq restart with 1;",
+                    "alter sequence department_departmentid_seq restart with 1;"
             };
 
             for (String s:sqls){
