@@ -8,35 +8,28 @@ import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
 import java.util.*;
 
 public class PrerequisiteUtil extends Util{
+
+    //TODO: Wrong Answer
     private static HashMap<Prerequisite,BooleanTreeNode> correspondMap;
 
     private PrerequisiteUtil(){
         super();
     }
 
-    /*public static void main(String[] args) {
+    public static void main(String[] args) {
         CoursePrerequisite ca=new CoursePrerequisite("A");
         CoursePrerequisite cb=new CoursePrerequisite("B");
         CoursePrerequisite cc=new CoursePrerequisite("C");
-        CoursePrerequisite cd=new CoursePrerequisite("D");
 
-        *//*AndPrerequisite and1=new AndPrerequisite(Arrays.asList(ca,cb));
-        OrPrerequisite or2=new OrPrerequisite(Arrays.asList(and1,cc));
-        AndPrerequisite and3=new AndPrerequisite(Arrays.asList(or2,cd));
+        AndPrerequisite and2=new AndPrerequisite(Arrays.asList(ca,cb));
+        OrPrerequisite or1=new OrPrerequisite(Arrays.asList(and2,cc));
 
-        Prerequisite root=transformPrerequisite(and3);
 
-        System.out.println(getExpression(and3));
-        System.out.println(getExpression(root));*//*
 
-        AndPrerequisite and=new AndPrerequisite(Arrays.asList(ca,cb,cc,cd));
+        System.out.println(getExpression(or1));
+        System.out.println(getExpression(transformPrerequisite(or1)));
 
-        OrPrerequisite orx=new OrPrerequisite(Arrays.asList(and,ca));
-
-        System.out.println(getExpression(orx));
-        System.out.println(getExpression(transformPrerequisite(orx)));
-
-    }*/
+    }
 
     public static int getGroupCount(Prerequisite simplifiedRoot){
         if(simplifiedRoot==null){
@@ -111,6 +104,7 @@ public class PrerequisiteUtil extends Util{
 
         return getFinalTree(allCourseList,originRoot);
     }
+
     private static Prerequisite getFinalTree(List<CoursePrerequisite> allCourseList,Prerequisite root){
         if(isVerySimple(root)){
             return root;
@@ -152,6 +146,7 @@ public class PrerequisiteUtil extends Util{
 
         return treeRoot;
     }
+
     private static String toBinary(int number,int digits){
         String cover = Integer.toBinaryString(1 << digits).substring(1);
         String s = Integer.toBinaryString(number);
