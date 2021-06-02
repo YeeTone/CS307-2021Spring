@@ -17,7 +17,9 @@ import java.sql.*;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @ParametersAreNonnullByDefault
 public class ReferenceCourseService implements CourseService {
@@ -211,7 +213,7 @@ public class ReferenceCourseService implements CourseService {
 
     @Override
     public int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek,
-                                     List<Short> weekList, short classStart,
+                                     Set<Short> weekList, short classStart,
                                      short classEnd, String location) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             adjustSequenceVal(conn);
@@ -452,7 +454,7 @@ public class ReferenceCourseService implements CourseService {
 
                 Array weekList=rs.getArray(8);
 
-                List<Short>weeks=new ArrayList<>();
+                Set<Short>weeks=new HashSet<>();
 
                 for (Object o:(Object[]) weekList.getArray()){
                     if(o instanceof Number){
@@ -527,7 +529,7 @@ public class ReferenceCourseService implements CourseService {
 
 
 
-            String sql="select stu.userid as id, stu.firstname||' '||stu.lastname as fullname, stu.enrolleddate, " +
+            String sql="select stu.userid as id, getfullname(stu.firstname,stu.lastname) as fullname, stu.enrolleddate, " +
                     "m.majorid as majorid, m.name as majorName, " +
                     "d.departmentid as departmentId, d.name as departmentName " +
                     " from coursesection " +
@@ -535,7 +537,7 @@ public class ReferenceCourseService implements CourseService {
                     "inner join students as stu on stu.userid=s.studentid " +
                     "inner join major m on m.majorid = stu.majorid " +
                     "inner join department d on d.departmentid = m.departmentid "+
-                    "where courseid=? and semesterid=? ";
+                    "where courseid=? and semesterid=? ;";
             PreparedStatement p=conn.prepareStatement(sql);
 
             p.setString(1,courseId);

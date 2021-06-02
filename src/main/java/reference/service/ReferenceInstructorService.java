@@ -5,6 +5,7 @@ import cn.edu.sustech.cs307.dto.CourseSection;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.InstructorService;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,6 +13,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+@ParametersAreNonnullByDefault
 public class ReferenceInstructorService implements InstructorService {
     @Override
     public void addInstructor(int userId, String firstName, String lastName) {
