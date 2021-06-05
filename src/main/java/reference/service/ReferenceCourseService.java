@@ -48,8 +48,10 @@ public class ReferenceCourseService implements CourseService {
             insertPrerequisite(courseId,simplified);
 
 
-            String sql2="select count(distinct group_id) from prerequisite group by course_id";
+            String sql2="select count(distinct group_id) from prerequisite where course_id=? group by course_id";
             PreparedStatement p2=con.prepareStatement(sql2);
+
+            p2.setString(1,courseId);
             ResultSet rs=p2.executeQuery();
             if(rs.next()){
                 int maxGroupCount=rs.getInt(1);
@@ -335,11 +337,7 @@ public class ReferenceCourseService implements CourseService {
 
                 result.add(c);
             }
-            if(result.isEmpty()){
-                throw new EntityNotFoundException();
-            }else {
-                return result;
-            }
+            return result;
         }catch (SQLException e){
             e.printStackTrace();
             return result;
@@ -360,7 +358,7 @@ public class ReferenceCourseService implements CourseService {
             p.setString(1,courseId);
             p.setInt(2,semesterId);
 
-            System.out.println(p);
+            //System.out.println(p);
 
             ResultSet rs=p.executeQuery();
 

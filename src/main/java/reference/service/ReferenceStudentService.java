@@ -8,15 +8,15 @@ import cn.edu.sustech.cs307.dto.grade.PassOrFailGrade;
 import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.StudentService;
+import reference.util.SearchCourseUtil;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import java.sql.*;
+import java.sql.Date;
 import java.time.DayOfWeek;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @ParametersAreNonnullByDefault
 public class ReferenceStudentService implements StudentService {
@@ -50,7 +50,14 @@ public class ReferenceStudentService implements StudentService {
              CourseType searchCourseType, boolean ignoreFull, boolean ignoreConflict,
              boolean ignorePassed, boolean ignoreMissingPrerequisites,
              int pageSize, int pageIndex) {
-        return null;
+        try{
+            return SearchCourseUtil.searchCourse(studentId, semesterId, searchCid, searchName, searchInstructor,
+                    searchDayOfWeek, searchClassTime, searchClassLocations, searchCourseType,
+                    ignoreFull, ignoreConflict, ignorePassed, ignoreMissingPrerequisites,
+                    pageSize, pageIndex);
+        }catch (Exception e){
+            throw new IntegrityViolationException();
+        }
     }
 
     @Override
@@ -94,7 +101,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private static boolean isCourseFound(Connection conn,int studentId,int sectionId){
+    public static boolean isCourseFound(Connection conn,int studentId,int sectionId){
         try {
             String sql="select * from coursesection where sectionid=?";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -108,7 +115,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private static boolean hasAlreadyEnrolled(Connection conn,int studentId,int sectionId){
+    public static boolean hasAlreadyEnrolled(Connection conn,int studentId,int sectionId){
         try {
             String sql="select 'a' from studentcourseselection where studentid=? and sectionid=?";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -124,7 +131,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private static boolean hasAlreadyPassed(Connection conn,int studentId,int sectionId){
+    public static boolean hasAlreadyPassed(Connection conn,int studentId,int sectionId){
         try {
             String sql="select * from " +
                     "((select c.courseid from student100course " +
@@ -141,7 +148,7 @@ public class ReferenceStudentService implements StudentService {
             p.setInt(2,studentId);
             p.setInt(3,sectionId);
 
-            System.out.println(p);
+            //System.out.println(p);
 
             ResultSet rs=p.executeQuery();
 
@@ -151,14 +158,14 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private static boolean hasPrerequisiteFulfilled(Connection conn,int studentId,int sectionId){
+    public static boolean hasPrerequisiteFulfilled(Connection conn,int studentId,int sectionId){
         try {
             String sql="select 'a' from students where isprerequisitefullfilled(?,?)";
             PreparedStatement p=conn.prepareStatement(sql);
 
             p.setInt(1,studentId);
             p.setInt(2,sectionId);
-            System.out.println(p);
+            //System.out.println(p);
 
             ResultSet rs=p.executeQuery();
             return rs.next();
@@ -171,8 +178,8 @@ public class ReferenceStudentService implements StudentService {
     private static boolean hasCourseConflictFound(Connection conn,int studentId,int sectionId){
         try{
             String sql="select sameTimeCourse.sectionid from( " +
-                    "select otherClasses.* from " +
-                    "(select c.* " +
+                    "select otherClasses.*from " +
+                    "(select c.*,cs.semesterid " +
                     "from coursesection as cs " +
                     "inner join coursesectionclass c on cs.sectionid = c.sectionid " +
                     "where cs.sectionid=?) as currentCourseSection " +
@@ -180,14 +187,21 @@ public class ReferenceStudentService implements StudentService {
                     "    on otherClasses.classbegin<=currentCourseSection.classbegin " +
                     "and otherClasses.classend>=currentCourseSection.classend " +
                     "and otherClasses.dayofweek=currentCourseSection.dayofweek " +
-                    "    ) as sameTimeCourse " +
-                    "inner join studentcourseselection as selection " +
+                    "inner join coursesection as cs " +
+                    "   on cs.sectionid=otherClasses.sectionid" +
+                    "   and cs.semesterid=currentCourseSection.semesterid" +
+                    ") as sameTimeCourse " +
+                    "inner join (select cs1.studentid, sectionid from studentcourseselection as cs1 " +
+                    "union all (select cs2.studentid, sectionid from student100course as cs2)" +
+                    "union all (select cs3.studentid, sectionid from studentpfcourse as cs3)) as selection " +
                     "on selection.sectionid=sameTimeCourse.sectionid " +
                     "where selection.studentid=?";
             PreparedStatement p=conn.prepareStatement(sql);
 
+
             p.setInt(1,sectionId);
             p.setInt(2,studentId);
+            //System.out.println(p);
 
             ResultSet rs=p.executeQuery();
 
@@ -205,7 +219,7 @@ public class ReferenceStudentService implements StudentService {
                     "inner join coursesection cs on scs.sectionid = cs.sectionid where cs.sectionid=? group by cs.totalcapacity,cs.sectionid ";
             PreparedStatement p=conn.prepareStatement(sql);
             p.setInt(1,sectionId);
-            System.out.println(p);
+            //System.out.println(p);
 
             ResultSet rs=p.executeQuery();
 
@@ -229,7 +243,11 @@ public class ReferenceStudentService implements StudentService {
             p.setInt(1,studentId);
             p.setInt(2,sectionId);
 
-            p.executeUpdate();
+            int affected=p.executeUpdate();
+
+            if(affected<=0){
+                throw new IllegalStateException();
+            }
         }catch (SQLException e){
             throw new IntegrityViolationException();
         }
@@ -240,6 +258,10 @@ public class ReferenceStudentService implements StudentService {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
 
             boolean isPF= checkCourseGradeType(conn,sectionId,grade);
+
+            if(grade!=null&&(isPF!=grade instanceof PassOrFailGrade)){
+                throw new IntegrityViolationException();
+            }
 
             String sql;
             if((!isPF && grade==null)||grade instanceof HundredMarkGrade){
@@ -257,7 +279,7 @@ public class ReferenceStudentService implements StudentService {
             p.setInt(2,sectionId);
 
             if(grade==null){
-                p.setString(3,null);
+                p.setObject(3,null);
             }else if(grade instanceof HundredMarkGrade){
                 p.setInt(3,((HundredMarkGrade) grade).mark);
             }else {
@@ -299,7 +321,11 @@ public class ReferenceStudentService implements StudentService {
     @Override
     public void setEnrolledCourseGrade(int studentId, int sectionId, Grade grade) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
-            checkCourseGradeType(conn,sectionId,grade);
+            boolean isPF=checkCourseGradeType(conn,sectionId,grade);
+
+            if(isPF != grade instanceof PassOrFailGrade){
+                throw new IntegrityViolationException();
+            }
 
             String sql;
             if(grade instanceof HundredMarkGrade){
@@ -391,12 +417,62 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    //TODO: Unfinished
     @Override
     public CourseTable getCourseTable(int studentId, Date date) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
-            return null;
+            String sql="select sm.semesterid as smid, (? - sm.begin_time)/7+1 as smweek," +
+                    "c2.coursename, i.userid, getfullname(i.firstname,i.lastname), c.classbegin," +
+                    "c.classend, c.location, c.dayofweek,cs.sectionname " +
+                    "from semester as sm " +
+                    "inner join coursesection as cs on cs.semesterid=sm.semesterid " +
+                    "inner join coursesectionclass c on cs.sectionid = c.sectionid and c.week=(? - sm.begin_time)/7+1 " +
+                    "inner join course c2 on c2.courseid = cs.courseid " +
+                    "inner join instructor as i on i.userid=c.instructorid " +
+                    "inner join " +
+                    "((select sc1.sectionid from studentcourseselection as sc1 where sc1.studentid=?)" +
+                    "   union all (select sc2.sectionid from studentpfcourse as sc2 where sc2.studentid=?)" +
+                    "   union all (select sc3.sectionid from student100course as sc3 where sc3.studentid=?)) as scs" +
+                    " on scs.sectionid=cs.sectionid " +
+                    "where ? between sm.begin_time and sm.end_time;";
+            PreparedStatement p=conn.prepareStatement(sql);
+
+            p.setDate(1,date);
+            p.setDate(2,date);
+            p.setInt(3,studentId);
+            p.setInt(4,studentId);
+            p.setInt(5,studentId);
+            p.setDate(6,date);
+
+            ResultSet rs=p.executeQuery();
+            CourseTable ct=new CourseTable();
+            ct.table=new HashMap<>();
+
+            for (DayOfWeek d:DayOfWeek.values()){
+                ct.table.put(d,new HashSet<>());
+            }
+
+            while (rs.next()){
+                //System.out.println(rs.getInt(2));
+                CourseTable.CourseTableEntry entry=new CourseTable.CourseTableEntry();
+                entry.courseFullName=String.format("%s[%s]",rs.getString(3),rs.getString(10));
+
+                Instructor instructor=new Instructor();
+                instructor.id=rs.getInt(4);
+                instructor.fullName=rs.getString(5);
+                entry.instructor=instructor;
+
+                entry.classBegin=(short) rs.getInt(6);
+                entry.classEnd=(short) rs.getInt(7);
+                entry.location=rs.getString(8);
+
+                DayOfWeek d=DayOfWeek.of(rs.getInt(9));
+
+                ct.table.get(d).add(entry);
+            }
+
+            return ct;
         }catch (SQLException e){
+            e.printStackTrace();
             throw new IntegrityViolationException();
         }
 

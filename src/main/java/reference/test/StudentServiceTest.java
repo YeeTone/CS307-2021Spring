@@ -1,6 +1,8 @@
 package reference.test;
 
 import cn.edu.sustech.cs307.dto.Course;
+import cn.edu.sustech.cs307.dto.CourseTable;
+import cn.edu.sustech.cs307.dto.Instructor;
 import cn.edu.sustech.cs307.dto.grade.Grade;
 import cn.edu.sustech.cs307.dto.grade.HundredMarkGrade;
 import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
@@ -27,7 +29,7 @@ public class StudentServiceTest {
     }
 
     public static void main(String[] args) {
-        getEnrolledCoursesAndGradesTest();
+        passedPrerequisitesForCourseTest();
     }
 
     private static void addStudentTest(){
@@ -324,5 +326,121 @@ public class StudentServiceTest {
         Map<Course,Grade>enrolledMapAll=STUDENT_SERVICE.getEnrolledCoursesAndGrades(11910104,null);
         System.out.println(answer.equals(enrolledMapAll));
 
+    }
+
+    private static void getCourseTableTest(){
+        int cse=DEPARTMENT_SERVICE.addDepartment("CSE");
+        int cs=MAJOR_SERVICE.addMajor("CS",cse);
+
+        COURSE_SERVICE.addCourse("CS102A","JavaA",3,64, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+        COURSE_SERVICE.addCourse("CS203","DSAA",3,64, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+
+        int fall2020=SEMESTER_SERVICE.addSemester("2020Fall",Date.valueOf("2020-09-01"),Date.valueOf("2021-02-01"));
+        int spring2021=SEMESTER_SERVICE.addSemester("2020Spring",Date.valueOf("2021-03-01"),Date.valueOf("2021-06-01"));
+
+        int cs102aJames=COURSE_SERVICE.addCourseSection("CS102A",fall2020,"Java1A-James",160);
+        int dsaatb=COURSE_SERVICE.addCourseSection("CS203",fall2020,"DSAA-tb",160);
+
+        INSTRUCTOR_SERVICE.addInstructor(11910000,"James","YU");
+        INSTRUCTOR_SERVICE.addInstructor(11910001,"唐","博");
+
+        STUDENT_SERVICE.addStudent(11910104,cs,"YeeTone","WANG",Date.valueOf("2019-08-15"));
+
+        Set<Short>fullWeek=new HashSet<>(Arrays.asList(new Short[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}));
+        Set<Short>singleWeek=new HashSet<>(Arrays.asList(new Short[]{1,3,5,7,9,11,13,15}));
+
+        int jamesLecture=COURSE_SERVICE.addCourseSectionClass(cs102aJames,11910000,
+                DayOfWeek.MONDAY,fullWeek,(short) 3,(short) 4,"Room101");
+
+        int jamesLab=COURSE_SERVICE.addCourseSectionClass(cs102aJames,11910000,
+                DayOfWeek.TUESDAY,singleWeek,(short) 5,(short) 6,"Room102");
+
+        int tbLecture=COURSE_SERVICE.addCourseSectionClass(dsaatb,11910001,
+                DayOfWeek.TUESDAY,fullWeek,(short) 3,(short) 4,"Room107");
+
+        int tbLab=COURSE_SERVICE.addCourseSectionClass(dsaatb,11910001,
+                DayOfWeek.TUESDAY,singleWeek,(short)7,(short)8,"Room108");
+
+        StudentService.EnrollResult enrollJava=STUDENT_SERVICE.enrollCourse(11910104,cs102aJames);
+        StudentService.EnrollResult enrollDSAA=STUDENT_SERVICE.enrollCourse(11910104,dsaatb);
+
+        System.out.println(enrollJava);
+        System.out.println(enrollDSAA);
+
+        CourseTable result= STUDENT_SERVICE.getCourseTable(11910104,Date.valueOf("2020-09-08"));
+
+        CourseTable answer=new CourseTable();
+        answer.table=new HashMap<>();
+
+        for (DayOfWeek d:DayOfWeek.values()){
+            answer.table.put(d,new HashSet<>());
+        }
+
+        Instructor james=new Instructor();
+        james.id=11910000;
+        james.fullName="James YU";
+
+        Instructor tb=new Instructor();
+        tb.id=11910001;
+        tb.fullName="唐博";
+
+        CourseTable.CourseTableEntry entry1=new CourseTable.CourseTableEntry();
+        entry1.location="Room101";
+        entry1.classBegin=(short)3;
+        entry1.classEnd=(short)4;
+        entry1.instructor=james;
+        entry1.courseFullName="JavaA";
+
+        answer.table.get(DayOfWeek.MONDAY).add(entry1);
+
+        CourseTable.CourseTableEntry entry2=new CourseTable.CourseTableEntry();
+        entry2.location="Room107";
+        entry2.classBegin=(short)3;
+        entry2.classEnd=(short)4;
+        entry2.instructor=tb;
+        entry2.courseFullName="DSAA";
+
+        answer.table.get(DayOfWeek.TUESDAY).add(entry2);
+
+        System.out.println(answer.equals(result));
+
+
+
+    }
+
+    private static void passedPrerequisitesForCourseTest(){
+        int cse=DEPARTMENT_SERVICE.addDepartment("CSE");
+        int cs=MAJOR_SERVICE.addMajor("CS",cse);
+
+        COURSE_SERVICE.addCourse("CS102A","JavaA",3,64, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+        COURSE_SERVICE.addCourse("CS102B","JavaB",3,64, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+        COURSE_SERVICE.addCourse("CS203","DSAA",3,64, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+
+        CoursePrerequisite cs102A=new CoursePrerequisite("CS102A");
+        CoursePrerequisite cs102B=new CoursePrerequisite("CS102B");
+        CoursePrerequisite cs203=new CoursePrerequisite("CS203");
+        AndPrerequisite and1=new AndPrerequisite(Arrays.asList(cs102A,cs102B));
+        OrPrerequisite or2=new OrPrerequisite(Arrays.asList(cs203,and1));
+
+        COURSE_SERVICE.addCourse("CS401","Robot",3,64, Course.CourseGrading.HUNDRED_MARK_SCORE,or2);
+
+        int fall2020=SEMESTER_SERVICE.addSemester("2020Fall",Date.valueOf("2020-09-01"),Date.valueOf("2021-02-01"));
+        int spring2021=SEMESTER_SERVICE.addSemester("2020Spring",Date.valueOf("2021-03-01"),Date.valueOf("2021-06-01"));
+
+        int cs102aJames=COURSE_SERVICE.addCourseSection("CS102A",fall2020,"Java1A-James",160);
+        int cs102bHe=COURSE_SERVICE.addCourseSection("CS102B",fall2020,"Java1B-He",160);
+        int cs203tb=COURSE_SERVICE.addCourseSection("CS203",fall2020,"DSAA-tb",160);
+
+        INSTRUCTOR_SERVICE.addInstructor(11910000,"James","YU");
+        INSTRUCTOR_SERVICE.addInstructor(11910001,"唐","博");
+
+        STUDENT_SERVICE.addStudent(11910104,cs,"YeeTone","WANG",Date.valueOf("2019-08-15"));
+
+        /*STUDENT_SERVICE.addEnrolledCourseWithGrade(11910104,cs102aJames,new HundredMarkGrade((short) 90));
+        STUDENT_SERVICE.addEnrolledCourseWithGrade(11910104,cs102bHe,new HundredMarkGrade((short) 45));*/
+        STUDENT_SERVICE.addEnrolledCourseWithGrade(11910104,cs203tb,new HundredMarkGrade((short) 70));
+
+        boolean passed=STUDENT_SERVICE.passedPrerequisitesForCourse(11910104,"CS401");
+        System.out.println(passed);
     }
 }
