@@ -66,7 +66,9 @@ create table if not exists coursesectionclass
 
 create table if not exists department
 (
-    name         varchar(50),
+    name         varchar(50)
+        constraint department_departmentname_uq
+            unique,
     departmentid serial not null
         constraint department_pkey
             primary key
@@ -77,7 +79,9 @@ create table if not exists major
     majorid      serial not null
         constraint major_pkey
             primary key,
-    name         varchar(50),
+    name         varchar(50)
+        constraint major_majorname_uq
+            unique,
     departmentid bigint
         constraint major_departmentid_fkey
             references department
@@ -151,7 +155,9 @@ create table if not exists studentpfcourse
         constraint studentpfcourse_sectionid_fkey
             references coursesection
             on delete cascade,
-    grade     varchar(10)
+    grade     varchar(10),
+    constraint spf_uq
+        unique (studentid, sectionid)
 );
 
 create table if not exists student100course
@@ -164,7 +170,9 @@ create table if not exists student100course
         constraint student100course_sectionid_fkey
             references coursesection
             on delete cascade,
-    grade     integer
+    grade     integer,
+    constraint s100_uq
+        unique (studentid, sectionid)
 );
 
 create or replace function getfullname(firstname character varying, lastname character varying) returns character varying
@@ -188,7 +196,8 @@ begin
         loop
             charAti = substr(firstName, i, 1);
             if (not ((ascii(charAti) between ascii('A') and ascii('Z'))
-                or (ascii(charAti) between ascii('a') and ascii('z')))) then
+                or (ascii(charAti) between ascii('a') and ascii('z'))
+                or ascii(charAti) = ascii(' '))) then
                 isFirstAlphabetical = false;
             end if;
         end loop;
@@ -197,7 +206,8 @@ begin
         loop
             charAti = substr(lastName, i, 1);
             if (not ((ascii(charAti) between ascii('A') and ascii('Z'))
-                or (ascii(charAti) between ascii('a') and ascii('z')))) then
+                or (ascii(charAti) between ascii('a') and ascii('z'))
+                or ascii(charAti) = ascii(' '))) then
                 isLastAlphabetical = false;
             end if;
         end loop;
@@ -324,5 +334,4 @@ begin
 end
 
 $$;
-
 
