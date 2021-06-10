@@ -1,10 +1,8 @@
 package reference.util;
 
-import cn.edu.sustech.cs307.config.Config;
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.*;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
-import cn.edu.sustech.cs307.factory.ServiceFactory;
 import cn.edu.sustech.cs307.service.StudentService;
 
 import javax.annotation.Nullable;
@@ -55,21 +53,15 @@ public class SearchCourseUtil extends Util{
              StudentService.CourseType searchCourseType, boolean ignoreFull,boolean ignoreConflict,
              boolean ignorePassed, boolean ignoreMissingPrerequisites,
              int pageSize,int pageIndex){
+
         List<CourseSearchEntry> result=new ArrayList<>();
         Map<CourseSectionNode, Set<CourseSectionClass>>classMap=new HashMap<>();
-
-        /*if(studentId==11712716){
-            System.out.println(5);
-        }*/
 
         try(Connection conn= SQLDataSource.getInstance().getSQLConnection()){
             String sql;
             PreparedStatement p;
             if(searchClassLocations ==null){
-                sql="select c.courseid, c.coursename, c.credit, c.classhour, c.ispf," +
-                        "cs.sectionid,cs.sectionname,cs.totalcapacity,count(scs.studentid) as cnt," +
-                        "c2.classid,i.userid,getfullname(i.firstname,i.lastname) as fullName,c2.dayofweek," +
-                        "array_agg(c2.week) as arr,c2.classbegin,c2.classend,c2.location from course as c " +
+                sql="with allSec as (select cs.sectionid from course as c " +
                         "left outer join coursesection cs on c.courseid = cs.courseid " +
                         "left outer join coursesectionclass c2 on cs.sectionid = c2.sectionid " +
                         "inner join instructor i on i.userid = c2.instructorid " +
@@ -84,11 +76,57 @@ public class SearchCourseUtil extends Util{
                         "and (cs.semesterid=?) " +
                         //"and (? is null or c2.location like('%'||?||'%')) "+
                         "group by c.courseid, c.coursename, c.credit, c.classhour, c.ispf, cs.sectionid, cs.sectionname, " +
-                        "cs.totalcapacity, c2.classid, i.userid, getfullname(i.firstname,i.lastname), " +
-                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location";
+                        "cs.totalcapacity, c2.classid, i.userid, " +
+                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location) " +
+                        "select c3.courseid,c3.coursename,c3.credit,c3.classhour,c3.ispf," +
+                        "cs1.sectionid,cs1.sectionname,cs1.totalcapacity,count(scs.studentid) as cnt," +
+                        "c4.classid,i2.userid,getfullname(i2.firstname,i2.lastname) as fullName," +
+                        "c4.dayofweek,array_agg(c4.week)as arr,c4.classbegin,c4.classend,c4.location" +
+                        " from allSec " +
+                        "inner join coursesection as cs1 on cs1.sectionid=allSec.sectionid " +
+                        "inner join course c3 on c3.courseid = cs1.courseid " +
+                        "left outer join coursesectionclass c4 on cs1.sectionid = c4.sectionid " +
+                        "left outer join studentcourseselection scs on scs.sectionid=allSec.sectionid " +
+                        "left outer join instructor i2 on c4.instructorid = i2.userid " +
+                        "where cs1.sectionid=allSec.sectionid " +
+                        "group by c3.courseid, c3.coursename, c3.credit, c3.classhour, c3.ispf, cs1.sectionid, cs1.sectionname, " +
+                        "cs1.totalcapacity, c4.classid, i2.userid, getfullname(i2.firstname,i2.lastname)," +
+                        " c4.dayofweek, c4.classbegin, c4.classend, c4.location";
 
             }else {
-                sql="select c.courseid, c.coursename, c.credit, c.classhour, c.ispf," +
+                sql="with allSec as (select cs.sectionid from course as c " +
+                        "left outer join coursesection cs on c.courseid = cs.courseid " +
+                        "left outer join coursesectionclass c2 on cs.sectionid = c2.sectionid " +
+                        "inner join instructor i on i.userid = c2.instructorid " +
+                        "left outer join studentcourseselection as scs on scs.sectionid=cs.sectionid " +
+                        "where (c.courseid like('%'||?||'%') or ? is null) " +
+                        "and (c.coursename||'['||cs.sectionname||']' like '%'||?||'%' or ? is null)" +
+                        "and (? is null or i.firstname||i.lastname like('%'||?||'%') " +
+                        "or(i.firstname||' '||i.lastname like('%'||?||'%'))" +
+                        "or i.firstname like('%'||?||'%') or i.lastname like('%'||?||'%'))" +
+                        "and (? is null or c2.dayofweek=?) " +
+                        "and (? is null or ? between c2.classbegin and c2.classend)" +
+                        "and (cs.semesterid=?) " +
+                        "and (? is null or c2.location like('%'||?||'%')) "+
+                        "group by c.courseid, c.coursename, c.credit, c.classhour, c.ispf, cs.sectionid, cs.sectionname, " +
+                        "cs.totalcapacity, c2.classid, i.userid, " +
+                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location) " +
+                        "select c3.courseid,c3.coursename,c3.credit,c3.classhour,c3.ispf," +
+                        "cs1.sectionid,cs1.sectionname,cs1.totalcapacity,count(scs.studentid) as cnt," +
+                        "c4.classid,i2.userid,getfullname(i2.firstname,i2.lastname) as fullName," +
+                        "c4.dayofweek,array_agg(c4.week)as arr,c4.classbegin,c4.classend,c4.location" +
+                        " from allSec " +
+                        "inner join coursesection as cs1 on cs1.sectionid=allSec.sectionid " +
+                        "inner join course c3 on c3.courseid = cs1.courseid " +
+                        "left outer join coursesectionclass c4 on cs1.sectionid = c4.sectionid " +
+                        "left outer join studentcourseselection scs on scs.sectionid=allSec.sectionid " +
+                        "left outer join instructor i2 on c4.instructorid = i2.userid " +
+                        "where cs1.sectionid=allSec.sectionid " +
+                        "group by c3.courseid, c3.coursename, c3.credit, c3.classhour, c3.ispf, cs1.sectionid, cs1.sectionname, " +
+                        "cs1.totalcapacity, c4.classid, i2.userid, getfullname(i2.firstname,i2.lastname)," +
+                        " c4.dayofweek, c4.classbegin, c4.classend, c4.location";
+
+                /*sql="select c.courseid, c.coursename, c.credit, c.classhour, c.ispf," +
                         "cs.sectionid,cs.sectionname,cs.totalcapacity,count(scs.studentid) as cnt," +
                         "c2.classid,i.userid,getfullname(i.firstname,i.lastname) as fullName,c2.dayofweek," +
                         "array_agg(c2.week) as arr,c2.classbegin,c2.classend,c2.location from course as c " +
@@ -105,8 +143,9 @@ public class SearchCourseUtil extends Util{
                         "and (? is null or c2.location like('%'||?||'%')) "+
                         "group by c.courseid, c.coursename, c.credit, c.classhour, c.ispf, cs.sectionid, cs.sectionname, " +
                         "cs.totalcapacity, c2.classid, i.userid, getfullname(i.firstname,i.lastname), " +
-                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location";
+                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location";*/
             }
+
             p=conn.prepareStatement(sql);
             p.setString(1,searchCid);
             p.setString(2,searchCid);
@@ -310,7 +349,8 @@ public class SearchCourseUtil extends Util{
             }
 
             return finalResult;
-        }catch (SQLException e){
+        }
+        catch (SQLException e){
             e.printStackTrace();
             throw new IntegrityViolationException();
         }
