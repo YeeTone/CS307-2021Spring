@@ -66,18 +66,20 @@ public class SearchCourseUtil extends Util{
             String sql;
             PreparedStatement p;
             if(searchClassLocations ==null){
-                sql="select c.courseid, c.coursename, c.credit, c.classhour, c.ispf," +
+                sql="select distinct ak.courseid, ak.coursename, ak.credit, ak.classhour, " +
+                        "ak.ispf, ak.sectionid, ak.sectionname, " +
+                        "ak.totalcapacity, ak.cnt, ak.classid, ak.userid,ak.fullName, ak.dayofweek, array_agg(csc.week)," +
+                        "ak.classbegin, ak.classend, ak.location from(" +
+                        "select c.courseid, c.coursename, c.credit, c.classhour, c.ispf," +
                         "cs.sectionid,cs.sectionname,cs.totalcapacity,count(scs.studentid) as cnt," +
                         "c2.classid,i.userid,getfullname(i.firstname,i.lastname) as fullName,c2.dayofweek," +
-                        "array_agg(c2.week) as arr,c2.classbegin,c2.classend,c2.location from course as c " +
-                        "left outer join coursesection cs on c.courseid = cs.courseid " +
-                        "left outer join coursesectionclass c2 on cs.sectionid = c2.sectionid " +
+                        "array_agg(c2.week),c2.classbegin,c2.classend,c2.location from course as c " +
+                        "inner join coursesection cs on c.courseid = cs.courseid " +
+                        "inner join coursesectionclass c2 on cs.sectionid = c2.sectionid " +
                         "inner join instructor i on i.userid = c2.instructorid " +
                         "left outer join studentcourseselection as scs on scs.sectionid=cs.sectionid " +
-                        "where (c.courseid like('%'||?||'%') or ? is null) " +
-                        "and (c.coursename||'['||cs.sectionname||']' like '%'||?||'%' or ? is null)" +
-                        "and (? is null or i.firstname||i.lastname like('%'||?||'%') " +
-                        "or(i.firstname||' '||i.lastname like('%'||?||'%'))" +
+                        "where (c.courseid like('%'||?||'%') or ? is null) and (c.coursename||'['||cs.sectionname||']' like '%'||?||'%' or ? is null)" +
+                        "and (? is null or i.firstname||i.lastname like('%'||?||'%') or(i.firstname||' '||i.lastname like('%'||?||'%'))" +
                         "or i.firstname like('%'||?||'%') or i.lastname like('%'||?||'%'))" +
                         "and (? is null or c2.dayofweek=?) " +
                         "and (? is null or ? between c2.classbegin and c2.classend)" +
@@ -85,15 +87,23 @@ public class SearchCourseUtil extends Util{
                         //"and (? is null or c2.location like('%'||?||'%')) "+
                         "group by c.courseid, c.coursename, c.credit, c.classhour, c.ispf, cs.sectionid, cs.sectionname, " +
                         "cs.totalcapacity, c2.classid, i.userid, getfullname(i.firstname,i.lastname), " +
-                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location";
+                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location) as ak " +
+                        "inner join coursesectionclass as csc on csc.sectionid=ak.sectionid " +
+                        "group by csc.sectionid,csc.dayofweek,ak.courseid, coursename, credit, classhour, ispf, " +
+                        "ak.sectionid, ak.sectionname, ak.totalcapacity, ak.cnt, ak.classid, ak.userid, " +
+                        "ak.dayofweek, ak.classbegin, ak.classend, ak.location, ak.fullName";
 
             }else {
-                sql="select c.courseid, c.coursename, c.credit, c.classhour, c.ispf," +
+                sql="select distinct(ak.courseid, ak.coursename, ak.credit, ak.classhour, " +
+                        "ak.ispf, ak.sectionid, ak.sectionname, " +
+                        "ak.totalcapacity, ak.cnt, ak.classid, ak.userid,ak.fullName, ak.dayofweek, array_agg(csc.week)," +
+                        "ak.classbegin, ak.classend, ak.location) from(" +
+                        "select c.courseid, c.coursename, c.credit, c.classhour, c.ispf," +
                         "cs.sectionid,cs.sectionname,cs.totalcapacity,count(scs.studentid) as cnt," +
                         "c2.classid,i.userid,getfullname(i.firstname,i.lastname) as fullName,c2.dayofweek," +
-                        "array_agg(c2.week) as arr,c2.classbegin,c2.classend,c2.location from course as c " +
-                        "left outer join coursesection cs on c.courseid = cs.courseid " +
-                        "left outer join coursesectionclass c2 on cs.sectionid = c2.sectionid " +
+                        "array_agg(c2.week),c2.classbegin,c2.classend,c2.location from course as c " +
+                        "inner join coursesection cs on c.courseid = cs.courseid " +
+                        "inner join coursesectionclass c2 on cs.sectionid = c2.sectionid " +
                         "inner join instructor i on i.userid = c2.instructorid " +
                         "left outer join studentcourseselection as scs on scs.sectionid=cs.sectionid " +
                         "where (c.courseid like('%'||?||'%') or ? is null) and (c.coursename||'['||cs.sectionname||']' like '%'||?||'%' or ? is null)" +
@@ -105,7 +115,11 @@ public class SearchCourseUtil extends Util{
                         "and (? is null or c2.location like('%'||?||'%')) "+
                         "group by c.courseid, c.coursename, c.credit, c.classhour, c.ispf, cs.sectionid, cs.sectionname, " +
                         "cs.totalcapacity, c2.classid, i.userid, getfullname(i.firstname,i.lastname), " +
-                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location";
+                        "c2.dayofweek, c2.classbegin, c2.classend, c2.location) as ak " +
+                        "inner join coursesectionclass as csc on csc.sectionid=ak.sectionid " +
+                        "group by csc.sectionid,csc.dayofweek,ak.courseid, coursename, credit, classhour, ispf, " +
+                        "ak.sectionid, ak.sectionname, ak.totalcapacity, ak.cnt, ak.classid, ak.userid, " +
+                        "ak.dayofweek, ak.classbegin, ak.classend, ak.location, ak.fullName";
             }
             p=conn.prepareStatement(sql);
             p.setString(1,searchCid);

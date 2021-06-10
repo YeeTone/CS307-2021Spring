@@ -21,7 +21,7 @@ import java.util.*;
 @ParametersAreNonnullByDefault
 public class ReferenceStudentService implements StudentService {
     @Override
-    public synchronized void addStudent(int userId, int majorId, String firstName, String lastName, Date enrolledDate) {
+    public void addStudent(int userId, int majorId, String firstName, String lastName, Date enrolledDate) {
         try(Connection conn= SQLDataSource.getInstance().getSQLConnection()){
             String sql="insert into students" +
                     "(userid, majorid, firstname, lastname, enrolleddate) " +
@@ -43,7 +43,7 @@ public class ReferenceStudentService implements StudentService {
 
     //TODO: Unfinished
     @Override
-    public synchronized List<CourseSearchEntry> searchCourse
+    public List<CourseSearchEntry> searchCourse
             (int studentId, int semesterId, @Nullable String searchCid, @Nullable String searchName,
              @Nullable String searchInstructor, @Nullable DayOfWeek searchDayOfWeek,
              @Nullable Short searchClassTime, @Nullable List<String> searchClassLocations,
@@ -61,7 +61,7 @@ public class ReferenceStudentService implements StudentService {
     }
 
     @Override
-    public synchronized EnrollResult enrollCourse(int studentId, int sectionId) {
+    public EnrollResult enrollCourse(int studentId, int sectionId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             if(!isCourseFound(conn,studentId,sectionId)){
                 return EnrollResult.COURSE_NOT_FOUND;
@@ -101,7 +101,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public synchronized boolean isCourseFound(Connection conn,int studentId,int sectionId){
+    public static boolean isCourseFound(Connection conn,int studentId,int sectionId){
         try {
             String sql="select * from coursesection where sectionid=?";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -115,7 +115,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public synchronized  boolean hasAlreadyEnrolled(Connection conn,int studentId,int sectionId){
+    public static boolean hasAlreadyEnrolled(Connection conn,int studentId,int sectionId){
         try {
             String sql="select 'a' from studentcourseselection where studentid=? and sectionid=?";
 
@@ -139,7 +139,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public synchronized  boolean hasAlreadyPassed(Connection conn,int studentId,int sectionId){
+    public static boolean hasAlreadyPassed(Connection conn,int studentId,int sectionId){
         try {
             String sql="select * from " +
                     "((select c.courseid from student100course " +
@@ -166,7 +166,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public synchronized  boolean hasPrerequisiteFulfilled(Connection conn,int studentId,int sectionId){
+    public static boolean hasPrerequisiteFulfilled(Connection conn,int studentId,int sectionId){
         try {
             String sql="select 'a' from students where isprerequisitefullfilled(?,?)";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -183,7 +183,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private boolean hasCourseConflictFound(Connection conn,int studentId,int sectionId){
+    private static boolean hasCourseConflictFound(Connection conn,int studentId,int sectionId){
         try{
             String sql="select sameTimeCourse.sectionid from( " +
                     "select otherClasses.*from " +
@@ -226,7 +226,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private synchronized  boolean isCourseFull(Connection conn,int studentId,int sectionId){
+    private static boolean isCourseFull(Connection conn,int studentId,int sectionId){
 
         try{
             String sql="select count(*),max(cs.totalcapacity) over(partition by cs.sectionid) from studentcourseselection as scs " +
@@ -249,7 +249,7 @@ public class ReferenceStudentService implements StudentService {
     }
 
     @Override
-    public synchronized void dropCourse(int studentId, int sectionId) throws IllegalStateException {
+    public void dropCourse(int studentId, int sectionId) throws IllegalStateException {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="delete from studentcourseselection where studentid=? and sectionid=?";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -308,7 +308,7 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private synchronized boolean checkCourseGradeType(Connection conn,int sectionId,@Nullable Grade grade){
+    private boolean checkCourseGradeType(Connection conn,int sectionId,@Nullable Grade grade){
         try{
 
             String sql="select c.ispf from coursesection as cs " +
@@ -333,7 +333,7 @@ public class ReferenceStudentService implements StudentService {
     }
 
     @Override
-    public synchronized void setEnrolledCourseGrade(int studentId, int sectionId, Grade grade) {
+    public void setEnrolledCourseGrade(int studentId, int sectionId, Grade grade) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             boolean isPF=checkCourseGradeType(conn,sectionId,grade);
 
@@ -493,7 +493,7 @@ public class ReferenceStudentService implements StudentService {
     }
 
     @Override
-    public synchronized boolean passedPrerequisitesForCourse(int studentId, String courseId) {
+    public boolean passedPrerequisitesForCourse(int studentId, String courseId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select isprerequisitefullfilledbycourse(?,?);";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -514,7 +514,7 @@ public class ReferenceStudentService implements StudentService {
     }
 
     @Override
-    public synchronized Major getStudentMajor(int studentId) {
+    public Major getStudentMajor(int studentId) {
         try (Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select d.departmentid,d.name, m.majorid, m.name from major m " +
                     "inner join students s on m.majorid = s.majorid " +

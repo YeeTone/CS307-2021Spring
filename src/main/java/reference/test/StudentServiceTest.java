@@ -29,7 +29,7 @@ public class StudentServiceTest {
     }
 
     public static void main(String[] args) {
-        passedPrerequisitesForCourseTest();
+        enrollCourseTest5();
     }
 
     private static void addStudentTest(){
@@ -150,6 +150,7 @@ public class StudentServiceTest {
                 Course.CourseGrading.HUNDRED_MARK_SCORE,null);
 
         int fall2020=SEMESTER_SERVICE.addSemester("2020Fall",Date.valueOf("2020-09-01"),Date.valueOf("2021-02-01"));
+        int spring2021=SEMESTER_SERVICE.addSemester("2021Spring",Date.valueOf("2021-03-01"),Date.valueOf("2021-06-07"));
 
         int cs102aLab1=COURSE_SERVICE.addCourseSection("CS102A",fall2020,"Lab1",45);
         int dsaaLab2=COURSE_SERVICE.addCourseSection("CS203",fall2020,"Lab2",45);
@@ -165,8 +166,8 @@ public class StudentServiceTest {
 
         //List<Short> singleWeek=Arrays.asList(new Short[]{1,3,5,7,9,11,13,15});
         Set<Short> singleWeek=new HashSet<>(Arrays.asList(new Short[]{1,3,5,7,9,11,13,15}));
-        int dsaaLesson1=COURSE_SERVICE.addCourseSectionClass(dsaaLab2,11911831,DayOfWeek.TUESDAY,singleWeek,(short)3,(short) 4,"Lychee");
-        int dsaaLesson2=COURSE_SERVICE.addCourseSectionClass(dsaaLab2,11911831,DayOfWeek.FRIDAY,singleWeek,(short)3,(short) 4,"Lychee");
+        int dsaaLesson1=COURSE_SERVICE.addCourseSectionClass(dsaaLab2,11911831,DayOfWeek.TUESDAY,singleWeek,(short)2,(short) 3,"Lychee");
+        int dsaaLesson2=COURSE_SERVICE.addCourseSectionClass(dsaaLab2,11911831,DayOfWeek.FRIDAY,singleWeek,(short)2,(short) 3,"Lychee");
 
         StudentService.EnrollResult enroll2=STUDENT_SERVICE.enrollCourse(11910104,dsaaLab2);
 
