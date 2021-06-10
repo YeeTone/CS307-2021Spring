@@ -1,6 +1,6 @@
-package Reference.ServiceImplementation;
 
-import Reference.ServiceImplementation.ReferenceDepartmentService;
+package reference.service;
+
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Major;
 import cn.edu.sustech.cs307.exception.EntityNotFoundException;
@@ -8,10 +8,7 @@ import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.MajorService;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,16 +17,6 @@ public class ReferenceMajorService implements MajorService {
     @Override
     public int addMajor(String name, int departmentId) {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
-//            String sql = "select * from department where departmentId = ?";
-//            PreparedStatement preparedStatement0 = con.prepareStatement(sql);
-//            preparedStatement0.setInt(1, departmentId);
-//            //preparedStatement0.executeUpdate();
-//            ResultSet resultSet0 = preparedStatement0.executeQuery();
-//            if (resultSet0 == null) {
-//                System.out.println("Department Missing");
-//                return 0;
-//            }
-
             String sql1 = "insert into major" +
                     "(name, departmentId)" +
                     "values (?, ?)";
@@ -38,10 +25,13 @@ public class ReferenceMajorService implements MajorService {
             preparedStatement.setInt(2, departmentId);
             preparedStatement.executeUpdate();
             ResultSet resultSet = preparedStatement.getGeneratedKeys();
-            if (resultSet.next()) {
+            if(resultSet.next()){
                 return resultSet.getInt(1);
+            }else {
+                throw new EntityNotFoundException();
             }
-            else throw new EntityNotFoundException();
+
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new IntegrityViolationException();
@@ -49,7 +39,7 @@ public class ReferenceMajorService implements MajorService {
     }
 
     @Override
-    public void removeMajor(int majorId) throws SQLException {
+    public void removeMajor(int majorId) {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
             String sql1 = "delete from major where majorId = ?";
             PreparedStatement preparedStatement = con.prepareStatement(sql1);
@@ -90,7 +80,7 @@ public class ReferenceMajorService implements MajorService {
     }
 
     @Override
-    public cn.edu.sustech.cs307.dto.Major getMajor(int majorId) {
+    public Major getMajor(int majorId) {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
             Major major = new Major();
             String sql1 = "select * from major where majorId = ?";

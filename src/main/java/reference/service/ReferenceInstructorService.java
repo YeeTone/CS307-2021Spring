@@ -1,5 +1,5 @@
-package Reference.ServiceImplementation;
 
+package reference.service;
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.CourseSection;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
@@ -26,6 +26,7 @@ public class ReferenceInstructorService implements InstructorService {
             preparedStatement.setString(2, firstName);
             preparedStatement.setString(3, lastName);
             preparedStatement.executeUpdate();
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new IntegrityViolationException();
@@ -34,36 +35,42 @@ public class ReferenceInstructorService implements InstructorService {
 
     @Override
     public List<CourseSection> getInstructedCourseSections(int instructorId, int semesterId) {
+        List<CourseSection> result = new ArrayList<>();
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
-            List<CourseSection> result = new ArrayList<>();
-            String sql="select s.sectionid, m.sectionname, m.totalcapacity, count(s.studentid)" +
-                    "from (" +
-                    "    (select c2.*" +
-                    "      from instructor" +
-                    "               left outer join coursesectionclass c on instructor.userid = c.instructorid" +
-                    "               inner join coursesection c2 on c2.sectionid = c.sectionid" +
-                    "      where instructor.userid = ?" +
-                    "        and c2.semesterid = ?) m" +
-                    "         inner join studentcourseselection s on s.sectionid = m.sectionid)" +
-                    "group by s.sectionid, m.sectionname, m.totalcapacity;";
-            PreparedStatement preparedStatement = con.prepareStatement(sql);
+            String sql1 = "select * from courseSectionClass where instructorId = ?";
+            PreparedStatement preparedStatement = con.prepareStatement(sql1);
             preparedStatement.setInt(1, instructorId);
-            preparedStatement.setInt(2, semesterId);
-
+            preparedStatement.executeUpdate();
             ResultSet resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                CourseSection courseSection = new CourseSection();
-                courseSection.id = resultSet.getInt(1);
-                courseSection.name = resultSet.getString(2);
-                courseSection.totalCapacity = resultSet.getInt(3);
-                courseSection.leftCapacity = courseSection.totalCapacity - resultSet.getInt(4);
+            String sql2 = "select * from courseSection where semesterId = ? and sectionId = ?";
+            PreparedStatement preparedStatement1 = con.prepareStatement(sql2);
+            preparedStatement1.setInt(1, semesterId);
+            preparedStatement1.setInt(2, resultSet.getInt(1));
+            preparedStatement1.executeUpdate();
+            ResultSet resultSet1 = preparedStatement1.executeQuery();
+            CourseSection courseSection = new CourseSection();
+            String sql3 = "select cs.sectionId, cs.sectionname, cs.totalcapacity, count(s.studentId) " +
+                    "from coursesection as cs " +
+                    "inner join studentcourseselection as s " +
+                    "on cs.sectionId = s.sectionId " +
+                    "where courseId = ? and semesterId = ? group by s.studentId, cs.sectionId";
+            PreparedStatement preparedStatement2 = con.prepareStatement(sql3);
+            preparedStatement2.setString(1, resultSet1.getString(1));
+            preparedStatement2.setInt(2, semesterId);
+            ResultSet resultSet2 = preparedStatement2.executeQuery();
+            while (resultSet1.next()) {
+                courseSection.id = resultSet1.getInt(3);
+                courseSection.name = resultSet1.getString(4);
+                courseSection.leftCapacity = resultSet1.getInt(5)-resultSet2.getInt(4);
+                courseSection.totalCapacity = resultSet1.getInt(5);
+
                 result.add(courseSection);
+
             }
             return result;
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             throw new IntegrityViolationException();
         }
-
     }
 }

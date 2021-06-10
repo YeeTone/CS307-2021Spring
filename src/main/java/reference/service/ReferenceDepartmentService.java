@@ -1,4 +1,5 @@
-package Reference.ServiceImplementation;
+
+package reference.service;
 
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Department;
@@ -19,17 +20,18 @@ public class ReferenceDepartmentService implements DepartmentService {
     @Override
     public int addDepartment(String name) {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
-            String sql1 = "insert into department " +
-                    "(name) " + " values (?)";
+            String sql1 = "insert into department" +
+                    "(name)" + "values (?)";
             PreparedStatement preparedStatement = con.prepareStatement(sql1,PreparedStatement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, name);
-            System.out.println(preparedStatement);
             preparedStatement.executeUpdate();
             ResultSet resultSet = preparedStatement.getGeneratedKeys();
-            if (resultSet.next()) {
+            if(resultSet.next()){
                 return resultSet.getInt(2);
+            }else {
+                throw new EntityNotFoundException();
             }
-            else throw new EntityNotFoundException();
+
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             throw new IntegrityViolationException();
@@ -41,7 +43,9 @@ public class ReferenceDepartmentService implements DepartmentService {
         try (Connection con = SQLDataSource.getInstance().getSQLConnection()) {
             String sql1 = "delete from department where departmentId = ?";
             PreparedStatement preparedStatement = con.prepareStatement(sql1);
-            preparedStatement.setInt(1, departmentId);
+
+            preparedStatement.setInt(1,departmentId);
+
             preparedStatement.executeUpdate();
         } catch (SQLException throwables) {
             throwables.printStackTrace();

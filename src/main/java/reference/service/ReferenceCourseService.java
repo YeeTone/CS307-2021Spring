@@ -25,7 +25,7 @@ import java.util.Set;
 public class ReferenceCourseService implements CourseService {
 
     @Override
-    public void addCourse(String courseId, String courseName,
+    public synchronized void addCourse(String courseId, String courseName,
                           int credit, int classHour, Course.CourseGrading grading,
                           @Nullable Prerequisite prerequisite) {
         try(Connection con=SQLDataSource.getInstance().getSQLConnection()){
@@ -72,7 +72,7 @@ public class ReferenceCourseService implements CourseService {
         }
     }
 
-    private void insertPrerequisite(String courseId, @Nullable Prerequisite simplified){
+    private synchronized void insertPrerequisite(String courseId, @Nullable Prerequisite simplified){
         //System.out.println(simplified);
         if(simplified==null){
             return;
@@ -160,7 +160,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public int addCourseSection(String courseId, int semesterId, String sectionName, int totalCapacity) {
+    public synchronized int addCourseSection(String courseId, int semesterId, String sectionName, int totalCapacity) {
 
         Connection conn = null;
         try{
@@ -214,10 +214,12 @@ public class ReferenceCourseService implements CourseService {
 
 
     @Override
-    public int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek,
+    public synchronized int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek,
                                      Set<Short> weekList, short classStart,
                                      short classEnd, String location) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
+            //System.out.println("sectionId = " + sectionId);
+
             adjustSequenceVal(conn);
 
             String sql="insert into coursesectionclass" +
@@ -254,7 +256,7 @@ public class ReferenceCourseService implements CourseService {
         }
     }
 
-    private void adjustSequenceVal(Connection conn){
+    private synchronized void adjustSequenceVal(Connection conn){
         try{
             String getNextSQL="select nextval('coursesectionclass_classid_seq');";
             PreparedStatement p= conn.prepareStatement(getNextSQL);
@@ -265,7 +267,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public void removeCourse(String courseId) {
+    public synchronized void removeCourse(String courseId) {
         try (Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="delete from course where courseid=?";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -280,7 +282,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public void removeCourseSection(int sectionId) {
+    public synchronized void removeCourseSection(int sectionId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="delete from coursesection where sectionid=?";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -295,7 +297,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public void removeCourseSectionClass(int classId) {
+    public synchronized void removeCourseSectionClass(int classId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="delete from coursesectionclass where classid=?";
             PreparedStatement p=conn.prepareStatement(sql);
@@ -310,7 +312,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public List<Course> getAllCourses() {
+    public synchronized List<Course> getAllCourses() {
         List<Course> result=new ArrayList<>();
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select * from course";
@@ -345,7 +347,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public List<CourseSection> getCourseSectionsInSemester(String courseId, int semesterId) {
+    public synchronized List<CourseSection> getCourseSectionsInSemester(String courseId, int semesterId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             List<CourseSection> result=new ArrayList<>();
 
@@ -387,7 +389,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public Course getCourseBySection(int sectionId) {
+    public synchronized Course getCourseBySection(int sectionId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             Course c=new Course();
             String sql="select co.courseid,co.coursename,co.credit,co.classhour,co.ispf from course as co " +
@@ -417,7 +419,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public List<CourseSectionClass> getCourseSectionClasses(int sectionId) {
+    public synchronized List<CourseSectionClass> getCourseSectionClasses(int sectionId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             List<CourseSectionClass> result=new ArrayList<>();
 
@@ -486,7 +488,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public CourseSection getCourseSectionByClass(int classId) {
+    public synchronized CourseSection getCourseSectionByClass(int classId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select csc.sectionid, c.sectionname,c.totalcapacity,count(s.studentid) " +
                     "from coursesectionclass as csc " +
@@ -516,7 +518,7 @@ public class ReferenceCourseService implements CourseService {
     }
 
     @Override
-    public List<Student> getEnrolledStudentsInSemester(String courseId, int semesterId) {
+    public synchronized List<Student> getEnrolledStudentsInSemester(String courseId, int semesterId) {
 
         Connection conn=null;
         try{
