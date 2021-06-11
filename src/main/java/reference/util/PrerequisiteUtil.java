@@ -8,8 +8,6 @@ import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
 import java.util.*;
 
 public class PrerequisiteUtil extends Util{
-
-    //TODO: Wrong Answer
     private static HashMap<Prerequisite,BooleanTreeNode> correspondMap;
 
     private PrerequisiteUtil(){

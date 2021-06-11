@@ -56,6 +56,7 @@ public class ReferenceStudentService implements StudentService {
                     ignoreFull, ignoreConflict, ignorePassed, ignoreMissingPrerequisites,
                     pageSize, pageIndex);
         }catch (Exception e){
+            e.printStackTrace();
             throw new IntegrityViolationException();
         }
     }
@@ -63,27 +64,27 @@ public class ReferenceStudentService implements StudentService {
     @Override
     public EnrollResult enrollCourse(int studentId, int sectionId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
-            if(!isCourseFound(conn,studentId,sectionId)){
+            if(!isCourseFound(studentId,sectionId)){
                 return EnrollResult.COURSE_NOT_FOUND;
             }
 
-            if(hasAlreadyEnrolled(conn,studentId,sectionId)){
+            if(hasAlreadyEnrolled(studentId,sectionId)){
                 return EnrollResult.ALREADY_ENROLLED;
             }
 
-            if(hasAlreadyPassed(conn,studentId,sectionId)){
+            if(hasAlreadyPassed(studentId,sectionId)){
                 return EnrollResult.ALREADY_PASSED;
             }
 
-            if(!hasPrerequisiteFulfilled(conn,studentId,sectionId)){
+            if(!hasPrerequisiteFulfilled(studentId,sectionId)){
                 return EnrollResult.PREREQUISITES_NOT_FULFILLED;
             }
 
-            if(hasCourseConflictFound(conn,studentId,sectionId)){
+            if(hasCourseConflictFound(studentId,sectionId)){
                 return EnrollResult.COURSE_CONFLICT_FOUND;
             }
 
-            if(isCourseFull(conn,studentId,sectionId)){
+            if(isCourseFull(studentId,sectionId)){
                 return EnrollResult.COURSE_IS_FULL;
             }
 
@@ -101,8 +102,8 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public static boolean isCourseFound(Connection conn,int studentId,int sectionId){
-        try {
+    public static boolean isCourseFound(int studentId,int sectionId){
+        try (Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select * from coursesection where sectionid=?";
             PreparedStatement p=conn.prepareStatement(sql);
 
@@ -115,8 +116,8 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public static boolean hasAlreadyEnrolled(Connection conn,int studentId,int sectionId){
-        try {
+    public static boolean hasAlreadyEnrolled(int studentId,int sectionId){
+        try (Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select 'a' from studentcourseselection where studentid=? and sectionid=?";
 
             PreparedStatement p=conn.prepareStatement(sql);
@@ -127,7 +128,7 @@ public class ReferenceStudentService implements StudentService {
             ResultSet rs=p.executeQuery();
 
             if(rs.next()){
-                System.out.println("Here!");
+                //System.out.println("Here!");
                 return true;
             }
 
@@ -139,8 +140,8 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public static boolean hasAlreadyPassed(Connection conn,int studentId,int sectionId){
-        try {
+    public static boolean hasAlreadyPassed(int studentId,int sectionId){
+        try (Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select * from " +
                     "((select c.courseid from student100course " +
                     "inner join coursesection c on c.sectionid = student100course.sectionid" +
@@ -166,8 +167,8 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    public static boolean hasPrerequisiteFulfilled(Connection conn,int studentId,int sectionId){
-        try {
+    public static boolean hasPrerequisiteFulfilled(int studentId,int sectionId){
+        try (Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select 'a' from students where isprerequisitefullfilled(?,?)";
             PreparedStatement p=conn.prepareStatement(sql);
 
@@ -183,9 +184,9 @@ public class ReferenceStudentService implements StudentService {
         }
     }
 
-    private static boolean hasCourseConflictFound(Connection conn,int studentId,int sectionId){
-        try{
-            String sql="select sameTimeCourse.sectionid from( " +
+    private static boolean hasCourseConflictFound(int studentId,int sectionId){
+        try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
+            /*String sql="select sameTimeCourse.sectionid from( " +
                     "select otherClasses.*from " +
                     "(select c.*,cs.semesterid " +
                     "from coursesection as cs " +
@@ -209,8 +210,37 @@ public class ReferenceStudentService implements StudentService {
                     "union all (select cs2.studentid, sectionid from student100course as cs2)" +
                     "union all (select cs3.studentid, sectionid from studentpfcourse as cs3)) as selection " +
                     "on selection.sectionid=sameTimeCourse.sectionid " +
+                    "where selection.studentid=?";*/
+            String sql="select sameTimeCourse.sectionid," +
+                    "sameTimeCourse.coursename||'['||sameTimeCourse.sectionname||']' as allName from( " +
+                    "select otherClasses.*,cs.sectionname,c2.coursename from " +
+                    "(select c.*,cs.semesterid " +
+                    "from coursesection as cs " +
+                    "inner join coursesectionclass c on cs.sectionid = c.sectionid " +
+                    "where cs.sectionid=?) as currentCourseSection " +
+                    "inner join coursesectionclass as otherClasses " +
+                    "    on ((otherClasses.classbegin<=currentCourseSection.classbegin " +
+                    "and otherClasses.classend>=currentCourseSection.classend)or " +
+                    "(otherClasses.classbegin>=currentCourseSection.classbegin " +
+                    "and otherClasses.classend<=currentCourseSection.classend) or " +
+                    "(otherClasses.classbegin>=currentCourseSection.classbegin and" +
+                    "                   otherClasses.classbegin<=currentCourseSection.classend)" +
+                    "                or(otherClasses.classend>=currentCourseSection.classbegin and" +
+                    "                   otherClasses.classend<=currentCourseSection.classend)) " +
+                    "and otherClasses.dayofweek=currentCourseSection.dayofweek " +
+                    "and otherClasses.week=currentCourseSection.week " +
+                    "inner join coursesection as cs " +
+                    "   on cs.sectionid=otherClasses.sectionid" +
+                    "   and cs.semesterid=currentCourseSection.semesterid " +
+                    "inner join course c2 on cs.courseid = c2.courseid" +
+                    ") as sameTimeCourse " +
+                    "inner join (select cs1.studentid, sectionid from studentcourseselection as cs1 " +
+                    "union all (select cs2.studentid, sectionid from student100course as cs2)" +
+                    "union all (select cs3.studentid, sectionid from studentpfcourse as cs3)) as selection " +
+                    "on selection.sectionid=sameTimeCourse.sectionid " +
                     "where selection.studentid=?";
             PreparedStatement p=conn.prepareStatement(sql);
+
 
 
             p.setInt(1,sectionId);
@@ -219,16 +249,43 @@ public class ReferenceStudentService implements StudentService {
 
             ResultSet rs=p.executeQuery();
 
-            return rs.next();
+            String sql2="with t as (select c2.courseid,c.semesterid,c2.coursename,c.sectionname " +
+                    "from coursesectionclass as cs3 " +
+                    "    inner join coursesection c on c.sectionid = cs3.sectionid " +
+                    "    inner join course c2 on c2.courseid = c.courseid " +
+                    "where c.sectionid=?) " +
+                    "select t.coursename||'['||t.sectionname||']','a' from t " +
+                    "    inner join coursesection as cs on cs.courseid=t.courseid " +
+                    "    inner join studentcourseselection s on cs.sectionid = s.sectionid " +
+                    "where s.studentid=? and t.semesterid=cs.semesterid " +
+                    "union all " +
+                    "select t.coursename||'['||t.sectionname||']','b' from t " +
+                    "    inner join coursesection as cs on cs.courseid=t.courseid " +
+                    "    inner join student100course s on cs.sectionid = s.sectionid " +
+                    "where s.studentid=? and t.semesterid=cs.semesterid " +
+                    "union all " +
+                    "select t.coursename||'['||t.sectionname||']','c' from t " +
+                    "    inner join coursesection as cs on cs.courseid=t.courseid " +
+                    "    inner join studentpfcourse s on cs.sectionid = s.sectionid " +
+                    "where s.studentid=? and t.semesterid=cs.semesterid;";
+            PreparedStatement p2=conn.prepareStatement(sql2);
+            p2.setInt(1,sectionId);
+            p2.setInt(2,studentId);
+            p2.setInt(3,studentId);
+            p2.setInt(4,studentId);
+
+            ResultSet rs2=p2.executeQuery();
+
+            return rs.next()||rs2.next();
         }catch (SQLException e){
             e.printStackTrace();
             throw new IntegrityViolationException();
         }
     }
 
-    private static boolean isCourseFull(Connection conn,int studentId,int sectionId){
+    private static boolean isCourseFull(int studentId,int sectionId){
 
-        try{
+        try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
             String sql="select count(*),max(cs.totalcapacity) over(partition by cs.sectionid) from studentcourseselection as scs " +
                     "inner join coursesection cs on scs.sectionid = cs.sectionid where cs.sectionid=? group by cs.totalcapacity,cs.sectionid ";
             PreparedStatement p=conn.prepareStatement(sql);

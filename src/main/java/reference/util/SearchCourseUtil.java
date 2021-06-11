@@ -239,7 +239,8 @@ public class SearchCourseUtil extends Util{
                     }
 
                 }
-            }else {
+            }
+            else {
                 /*if(studentId==11710673 && pageSize==25 && pageIndex==0){
                     System.out.println(p);
                     System.exit(0);
@@ -304,10 +305,11 @@ public class SearchCourseUtil extends Util{
             }
 
 
+
+
             for (Map.Entry<CourseSectionNode, Set<CourseSectionClass>> entry:classMap.entrySet()){
                 CourseSearchEntry searchEntry=new CourseSearchEntry();
                 searchEntry.course=entry.getKey().c;
-
 
                 searchEntry.section=entry.getKey().cs;
                 searchEntry.sectionClasses=entry.getValue();
@@ -316,21 +318,26 @@ public class SearchCourseUtil extends Util{
                 result.add(searchEntry);
             }
 
+            Map<CourseSearchEntry,CourseSearchEntryProperty>propertyMap=
+                    getEntryProperty(result,studentId,searchCourseType);
 
+            /*if(studentId==11713020){
+                System.out.println(studentId);
+            }*/
 
-            Map<CourseSearchEntry,CourseSearchEntryProperty>propertyMap=getEntryProperty(result,studentId);
             result=new ArrayList<>();
+
             for (CourseSearchEntryProperty csep:propertyMap.values()){
                 //System.out.println(csep);
 
-
-
                 if((ignoreConflict && csep.isHasConflict) ||(ignoreFull && csep.isFull)
                         ||(ignorePassed && csep.isHasPassed)||
-                        (ignoreMissingPrerequisites && csep.isPrerequisitesMissing)){
+                        (ignoreMissingPrerequisites && csep.isPrerequisitesMissing)
+                        ||(!csep.isAcceptable4CourseType)){
                     continue;
                 }
                 result.add(csep.entry);
+
             }
 
             result.sort((r1,r2)->{
@@ -340,8 +347,6 @@ public class SearchCourseUtil extends Util{
                     return (r1.course.name+"["+r1.section.name+"]").compareToIgnoreCase(r2.course.name+"["+r2.section.name+"]");
                 }
             });
-
-
 
             List<CourseSearchEntry> finalResult=new ArrayList<>();
             for (int i = pageIndex*pageSize; i < (pageIndex+1)*pageSize && i< result.size(); i++) {
@@ -356,13 +361,33 @@ public class SearchCourseUtil extends Util{
         }
     }
 
-    private static Map<CourseSearchEntry,CourseSearchEntryProperty> getEntryProperty(List<CourseSearchEntry> result,int studentId){
+    private static Map<CourseSearchEntry,CourseSearchEntryProperty> getEntryProperty(List<CourseSearchEntry> result,
+                                                                                     int studentId, StudentService.CourseType type){
         Map<CourseSearchEntry,CourseSearchEntryProperty> entryPropertyMap=new HashMap<>();
+
+
         for (CourseSearchEntry entry:result){
+
             CourseSearchEntryProperty property=new CourseSearchEntryProperty(entry,studentId);
-            property.checkAll();
+
+            property.checkAll(type);
+
             entryPropertyMap.put(entry,property);
+
+
+
+
+            /*CourseSearchEntryProperty origin= entryPropertyMap.get(entry);
+            if(origin==null){
+                entryPropertyMap.put(entry,property);
+            }else {
+                origin.isAcceptable4CourseType= origin.isAcceptable4CourseType && property.isAcceptable4CourseType;
+                origin.isFull= origin.isFull|| property.isFull;
+                origin.isHasConflict= origin.isHasConflict||property.isHasConflict;
+                origin.isHasPassed= origin.isHasPassed|| property.isHasPassed;
+            }*/
         }
+
         return entryPropertyMap;
     }
 
@@ -383,126 +408,6 @@ public class SearchCourseUtil extends Util{
             return Objects.hash(c, cs.id,cs.name);
         }
     }
-
-    private static class CourseSearchEntryProperty{
-        int studentId;
-        boolean isFull=false;
-        boolean isHasConflict=false;
-        boolean isHasPassed=false;
-        boolean isPrerequisitesMissing=false;
-        CourseSearchEntry entry;
-
-        public CourseSearchEntryProperty(CourseSearchEntry entry,int sid){
-            this.entry=entry;
-            this.studentId=sid;
-        }
-
-        public void checkIsFull(){
-            try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
-                int sectionId=entry.section.id;
-                String sql="select c.totalcapacity,count(*) from studentcourseselection as scs " +
-                        "inner join coursesection c on c.sectionid = scs.sectionid " +
-                        "where c.sectionid=? group by c.totalcapacity,scs.studentid";
-                PreparedStatement p=conn.prepareStatement(sql);
-
-                p.setInt(1,sectionId);
-
-                ResultSet rs=p.executeQuery();
-                if(rs.next()){
-                    int total=rs.getInt(1);
-                    int current=rs.getInt(2);
-                    this.isFull=total<=current;
-                }
-
-            }catch (SQLException e){
-                e.printStackTrace();
-            }
-        }
-
-        public void checkIsHasConflict(){
-            try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
-                int sectionId=entry.section.id;
-
-                String sql="select sameTimeCourse.sectionid from( " +
-                        "select otherClasses.*from " +
-                        "(select c.*,cs.semesterid " +
-                        "from coursesection as cs " +
-                        "inner join coursesectionclass c on cs.sectionid = c.sectionid " +
-                        "where cs.sectionid=?) as currentCourseSection " +
-                        "inner join coursesectionclass as otherClasses " +
-                        "    on otherClasses.classbegin<=currentCourseSection.classbegin " +
-                        "and otherClasses.classend>=currentCourseSection.classend " +
-                        "and otherClasses.dayofweek=currentCourseSection.dayofweek " +
-                        "inner join coursesection as cs " +
-                        "   on cs.sectionid=otherClasses.sectionid" +
-                        "   and cs.semesterid=currentCourseSection.semesterid" +
-                        ") as sameTimeCourse " +
-                        "inner join (select cs1.studentid, sectionid from studentcourseselection as cs1 " +
-                        "union all (select cs2.studentid, sectionid from student100course as cs2)" +
-                        "union all (select cs3.studentid, sectionid from studentpfcourse as cs3)) as selection " +
-                        "on selection.sectionid=sameTimeCourse.sectionid " +
-                        "where selection.studentid=?";
-                PreparedStatement p=conn.prepareStatement(sql);
-
-                p.setInt(1,sectionId);
-                p.setInt(2,studentId);
-
-                ResultSet rs=p.executeQuery();
-
-                this.isHasConflict=rs.next();
-            }catch (SQLException e){
-                e.printStackTrace();
-            }
-        }
-
-        public void checkIsHasPassed(){
-            try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
-                int sectionId=entry.section.id;
-
-                String sql="select * from " +
-                        "((select c.courseid from student100course " +
-                        "inner join coursesection c on c.sectionid = student100course.sectionid" +
-                        " where studentid=?and grade>=60)" +
-                        "union all " +
-                        "(select c2.courseid from studentpfcourse " +
-                        "inner join coursesection c2 on c2.sectionid = studentpfcourse.sectionid" +
-                        " where studentid=? and grade='P')) as allPassed " +
-                        "inner join coursesection cs on cs.courseid=allPassed.courseid and cs.sectionid=?";
-                PreparedStatement p=conn.prepareStatement(sql);
-
-                p.setInt(1,studentId);
-                p.setInt(2,studentId);
-                p.setInt(3,sectionId);
-
-                ResultSet rs=p.executeQuery();
-
-                this.isHasPassed=rs.next();
-            }catch (SQLException e){
-                e.printStackTrace();
-            }
-        }
-
-        public void checkIsPrerequisitesMissing(){
-            this.isPrerequisitesMissing=!Util.SERVICE_FACTORY.createService(StudentService.class)
-                    .passedPrerequisitesForCourse(studentId,entry.course.id);
-        }
-
-        public void checkAll(){
-            checkIsFull();
-            checkIsHasConflict();
-            checkIsHasPassed();
-            checkIsPrerequisitesMissing();
-        }
-
-        @Override
-        public String toString() {
-            return "CourseSearchEntryProperty{" +
-                    "studentId=" + studentId +
-                    ", isFull=" + isFull +
-                    ", isHasConflict=" + isHasConflict +
-                    ", isHasPassed=" + isHasPassed +
-                    ", isPrerequisitesMissing=" + isPrerequisitesMissing +
-                    '}';
-        }
-    }
 }
+
+

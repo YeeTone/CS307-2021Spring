@@ -28,6 +28,7 @@ public class ReferenceCourseService implements CourseService {
     public synchronized void addCourse(String courseId, String courseName,
                           int credit, int classHour, Course.CourseGrading grading,
                           @Nullable Prerequisite prerequisite) {
+
         try(Connection con=SQLDataSource.getInstance().getSQLConnection()){
             Prerequisite simplified= PrerequisiteUtil.transformPrerequisite(prerequisite);
             int groupCount=PrerequisiteUtil.getGroupCount(simplified);
@@ -115,9 +116,9 @@ public class ReferenceCourseService implements CourseService {
             }else if(simplified instanceof OrPrerequisite){
                 OrPrerequisite or=(OrPrerequisite) simplified;
 
-                for (Prerequisite andChild:or.terms){
-                    if(andChild instanceof AndPrerequisite){
-                        AndPrerequisite and=(AndPrerequisite) andChild;
+                for (Prerequisite child :or.terms){
+                    if(child instanceof AndPrerequisite){
+                        AndPrerequisite and=(AndPrerequisite) child;
                         for (Prerequisite courseChild:and.terms){
                             if(courseChild instanceof CoursePrerequisite){
                                 try{
@@ -134,6 +135,14 @@ public class ReferenceCourseService implements CourseService {
                                 }
                             }
                         }
+                        groupId++;
+                    }
+                    else if(child instanceof CoursePrerequisite){
+                        CoursePrerequisite course=(CoursePrerequisite) child;
+                        preparedStatement.setString(1,courseId);
+                        preparedStatement.setString(2,course.courseID);
+                        preparedStatement.setInt(3,groupId);
+                        preparedStatement.addBatch();
                         groupId++;
                     }
                 }
