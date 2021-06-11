@@ -244,13 +244,15 @@ begin
         loop
             if (exists(select *
                        from (((select cs.courseId
-                               from coursesection as cs
-                                        inner join prerequisite as p on p.prerequisitecourseid = cs.courseid
+                               from coursE as cs
+                                        inner join prerequisite as p
+                                                   on p.prerequisitecourseid = cs.courseid
                                where p.group_id = i)
                               except
                               ((select c3.courseId
                                 from coursesection as cs2
-                                         inner join course c3 on c3.courseId = cs2.courseId
+                                         inner join course c3
+                                                    on c3.courseId = cs2.courseId
                                          inner join student100Course s100C
                                                     on cs2.sectionId = s100C.sectionId and s100C.grade >= 60
                                 where s100C.studentId = studentIdx
@@ -258,8 +260,10 @@ begin
                                union all
                                (select c4.courseId
                                 from coursesection as cs3
-                                         inner join course c4 on cs3.courseId = c4.courseId
-                                         inner join studentPfCourse sPC on cs3.sectionId = sPC.sectionId and sPC.grade = 'P'
+                                         inner join course c4
+                                                    on cs3.courseId = c4.courseId
+                                         inner join studentPfCourse sPC
+                                                    on cs3.sectionId = sPC.sectionId and sPC.grade = 'P'
                                 where sPC.studentId = studentIdx)))) as notFullfilled)) then
                 currentIsOK := false;
                 raise notice 'not fulfilled in the group %',i;
@@ -281,9 +285,9 @@ create or replace function isprerequisitefullfilledbycourse(studentidx integer, 
 as
 $$
 declare
-    maxGroup    int= -1;
-    isOK        boolean= false;
-    currentIsOK boolean= false;
+    maxGroup    int     := -1;
+    isOK        boolean := false;
+    currentIsOK boolean := false;
 begin
     select maxPrerequisiteGroupCount
     into maxGroup
@@ -295,6 +299,7 @@ begin
     end if;
 
     if (maxGroup = 0) then
+        raise notice 'No Group!';
         return true;
     end if;
 
@@ -302,10 +307,11 @@ begin
         loop
             if (exists(select *
                        from (select cs.courseId
-                             from courseSection as cs
+                             from course as cs
                                       inner join prerequisite as p
                                                  on p.prerequisitecourseid = cs.courseId
-                             where p.group_id = i) as allPre
+                             where p.group_id = i
+                               and p.course_id = courseIdx) as allPre
                            except ((select c3.courseId
                                     from course c3
                                              inner join courseSection cs2
@@ -323,6 +329,7 @@ begin
                                     where spc.studentId = studentIdx)))) then
                 currentIsOK := false;
             else
+                --raise notice 'Here!';
                 currentIsOK := true;
             end if;
 
