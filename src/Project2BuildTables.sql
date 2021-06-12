@@ -129,6 +129,12 @@ create table if not exists studentcourseselection
             on delete cascade
 );
 
+create index if not exists student_course_selection_index
+    on studentcourseselection (studentid, sectionid);
+
+create index if not exists studentcourseselection_index2
+    on studentcourseselection (studentid);
+
 create table if not exists prerequisite
 (
     id                   serial      not null
@@ -160,6 +166,9 @@ create table if not exists studentpfcourse
         unique (studentid, sectionid)
 );
 
+create index if not exists spf_index
+    on studentpfcourse (studentid, grade);
+
 create table if not exists student100course
 (
     studentid integer
@@ -175,48 +184,19 @@ create table if not exists student100course
         unique (studentid, sectionid)
 );
 
+create index if not exists s100c_index
+    on student100course (studentid, grade);
+
 create or replace function getfullname(firstname character varying, lastname character varying) returns character varying
     language plpgsql
 as
 $$
-declare
-    isFirstAlphabetical boolean= true;
-    isLastAlphabetical  boolean= true;
-    charAti             text;
 begin
-    if (firstName is null) then
-        return lastName;
+    if (firstname ~ '[a-zA-z]' and lastName ~ '[a-zA-z]') then
+        return firstname || ' ' || lastname;
+    else
+        return firstname || lastname;
     end if;
-
-    if (lastName is null) then
-        return firstName;
-    end if;
-
-    for i in 1 .. length(firstName)
-        loop
-            charAti = substr(firstName, i, 1);
-            if (not ((ascii(charAti) between ascii('A') and ascii('Z'))
-                or (ascii(charAti) between ascii('a') and ascii('z'))
-                or ascii(charAti) = ascii(' '))) then
-                isFirstAlphabetical = false;
-            end if;
-        end loop;
-
-    for i in 1 .. length(lastName)
-        loop
-            charAti = substr(lastName, i, 1);
-            if (not ((ascii(charAti) between ascii('A') and ascii('Z'))
-                or (ascii(charAti) between ascii('a') and ascii('z'))
-                or ascii(charAti) = ascii(' '))) then
-                isLastAlphabetical = false;
-            end if;
-        end loop;
-
-    if (isFirstAlphabetical and isLastAlphabetical) then
-        return firstName || ' ' || lastName;
-    end if;
-
-    return firstName || lastName;
 end
 $$;
 
@@ -235,7 +215,7 @@ begin
              inner join courseSection cS on c.courseId = cS.courseId
     where cS.sectionId = sectionIdx;
 
-    if (maxGroup = 0) then
+    if (maxGroup = 0 or maxGroup is null) then
         return true;
     end if;
 
