@@ -64,7 +64,7 @@ public class ReferenceStudentService implements StudentService {
     @Override
     public EnrollResult enrollCourse(int studentId, int sectionId) {
         try(Connection conn=SQLDataSource.getInstance().getSQLConnection()){
-            if(!isCourseFound(studentId,sectionId)){
+            /*if(!isCourseFound(studentId,sectionId)){
                 return EnrollResult.COURSE_NOT_FOUND;
             }
 
@@ -78,6 +78,11 @@ public class ReferenceStudentService implements StudentService {
 
             if(!hasPrerequisiteFulfilled(studentId,sectionId)){
                 return EnrollResult.PREREQUISITES_NOT_FULFILLED;
+            }*/
+
+            EnrollResult er1=getInvalidResult(studentId,sectionId);
+            if(er1!=null){
+                return er1;
             }
 
             if(hasCourseConflictFound(studentId,sectionId)){
@@ -86,6 +91,9 @@ public class ReferenceStudentService implements StudentService {
 
             if(isCourseFull(studentId,sectionId)){
                 return EnrollResult.COURSE_IS_FULL;
+            }
+            if(studentId==11714884){
+                System.out.println(11714884);
             }
 
             String sql="insert into studentcourseselection(studentid, sectionid) values(?,?);";
@@ -99,6 +107,50 @@ public class ReferenceStudentService implements StudentService {
         }catch (SQLException e){
             e.printStackTrace();
             return EnrollResult.UNKNOWN_ERROR;
+        }
+    }
+
+    public static EnrollResult getInvalidResult(int studentId,int sectionId){
+        try(Connection conn=SQLDataSource.getInstance().getSQLConnection()) {
+            String sql="(select 'COURSE_NOT_FOUND' where not exists(select null from coursesection where sectionid=?)) union all " +
+                    "(select 'ALREADY_ENROLLED' " +
+                    "where exists(select null from studentcourseselection where studentid=? and sectionid=?)) union all " +
+                    "(select 'ALREADY_PASSED' where " +
+                    "exists(" +
+                    "with t as ((select c.courseid from coursesection as cs2 " +
+                    "inner join student100course s100c on cs2.sectionid = s100c.sectionid " +
+                    "inner join course c on c.courseid = cs2.courseid where s100c.studentid=? and s100c.grade>=60) union all " +
+                    "(select c2.courseid from coursesection as cs3 " +
+                    "inner join studentpfcourse s on cs3.sectionid = s.sectionid " +
+                    "inner join course c2 on c2.courseid = cs3.courseid where s.studentid=? and s.grade='P') ) " +
+                    "select * from t inner join course c on c.courseid=t.courseid " +
+                    "inner join coursesection c3 on c.courseid = c3.courseid " +
+                    "where c3.sectionid=?" +
+                    ")) union all " +
+                    "(select 'PREREQUISITES_NOT_FULFILLED' where not isprerequisitefullfilled(?,?))";
+            PreparedStatement p= conn.prepareStatement(sql);
+
+            p.setInt(1,sectionId);
+            p.setInt(2,studentId);
+            p.setInt(3,sectionId);
+            p.setInt(4,studentId);
+            p.setInt(5,studentId);
+            p.setInt(6,sectionId);
+            p.setInt(7,studentId);
+            p.setInt(8,sectionId);
+            //p.setInt(9,sectionId);
+
+            ResultSet rs=p.executeQuery();
+            if(rs.next()){
+                return EnrollResult.valueOf(rs.getString(1));
+            }else{
+                return null;
+            }
+
+
+
+        }catch (SQLException e){
+            return null;
         }
     }
 
@@ -249,30 +301,18 @@ public class ReferenceStudentService implements StudentService {
 
             ResultSet rs=p.executeQuery();
 
-            String sql2="with t as (select c2.courseid,c.semesterid,c2.coursename,c.sectionname " +
-                    "from coursesectionclass as cs3 " +
-                    "    inner join coursesection c on c.sectionid = cs3.sectionid " +
-                    "    inner join course c2 on c2.courseid = c.courseid " +
-                    "where c.sectionid=?) " +
-                    "select t.coursename||'['||t.sectionname||']','a' from t " +
-                    "    inner join coursesection as cs on cs.courseid=t.courseid " +
-                    "    inner join studentcourseselection s on cs.sectionid = s.sectionid " +
-                    "where s.studentid=? and t.semesterid=cs.semesterid " +
-                    "union all " +
-                    "select t.coursename||'['||t.sectionname||']','b' from t " +
-                    "    inner join coursesection as cs on cs.courseid=t.courseid " +
-                    "    inner join student100course s on cs.sectionid = s.sectionid " +
-                    "where s.studentid=? and t.semesterid=cs.semesterid " +
-                    "union all " +
-                    "select t.coursename||'['||t.sectionname||']','c' from t " +
-                    "    inner join coursesection as cs on cs.courseid=t.courseid " +
-                    "    inner join studentpfcourse s on cs.sectionid = s.sectionid " +
-                    "where s.studentid=? and t.semesterid=cs.semesterid;";
+            String sql2="with t as (select c.courseid,cs.semesterid from coursesection as cs " +
+                    "inner join studentcourseselection s on cs.sectionid = s.sectionid " +
+                    "inner join course c on c.courseid = cs.courseid " +
+                    "where s.studentid=?) " +
+                    "select * from t " +
+                    "inner join course c on c.courseid=t.courseid " +
+                    "inner join coursesection c2 on c.courseid = c2.courseid and c2.semesterid=t.semesterid " +
+                    "where c2.sectionid=?";
+
             PreparedStatement p2=conn.prepareStatement(sql2);
-            p2.setInt(1,sectionId);
-            p2.setInt(2,studentId);
-            p2.setInt(3,studentId);
-            p2.setInt(4,studentId);
+            p2.setInt(1,studentId);
+            p2.setInt(2,sectionId);
 
             ResultSet rs2=p2.executeQuery();
 

@@ -47,6 +47,16 @@ public class CourseSearchEntry {
     }
 
     @Override
+    public String toString() {
+        return "CourseSearchEntry{" +
+                "course=" + course +
+                ", section=" + section +
+                ", sectionClasses=" + sectionClasses +
+                ", conflictCourseNames=" + conflictCourseNames +
+                '}';
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hash(course, section, sectionClasses, conflictCourseNames);
     }

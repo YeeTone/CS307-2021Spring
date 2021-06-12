@@ -7,6 +7,7 @@ import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
 import cn.edu.sustech.cs307.factory.ServiceFactory;
 import cn.edu.sustech.cs307.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import reference.util.DatabaseClearUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,18 +40,47 @@ public final class ProjectJudge {
     private final List<CourseSearchEntry> errorCourseList = List.of(new CourseSearchEntry());
     private final CourseTable errorTable = new CourseTable();
 
+    static {
+        DatabaseClearUtil.clearDatabase();
+    }
+
     public EvalResult testSearchCourses(File searchCourseDir) {
+
         EvalResult result = new EvalResult();
+
+
         for (File file : searchCourseDir.listFiles((dir, name) -> !name.endsWith("Result.json"))) {
+
             List<List<Object>> searchCourseParams = readValueFromFile(file, List.class);
             List<List<CourseSearchEntry>> searchCourseExpected = readValueFromFile(
-                    new File(searchCourseDir, file.getName().replace(".json", "Result.json")), List.class);
+                    new File(searchCourseDir, file.getName().replace(".json", "Result.json")),
+                    List.class);
+
             searchCourseExpected.parallelStream().forEach(this::mapSearchEntryId);
             long beforeTime = System.nanoTime();
             List<List<CourseSearchEntry>> searchCourseResult = IntStream.range(0, searchCourseParams.size()).parallel()
                     .mapToObj(it -> testSearchCourse(searchCourseParams.get(it)))
                     .collect(Collectors.toUnmodifiableList());
             result.elapsedTimeNs.addAndGet(System.nanoTime() - beforeTime);
+
+            /*for (int i=0;i<searchCourseExpected.size();i++){
+                if(!searchCourseExpected.get(i).equals(searchCourseResult.get(i))){
+
+                    for (int j = 0; j < searchCourseResult.get(i).size(); j++) {
+                        if(!searchCourseResult.get(i).
+                                get(j).conflictCourseNames.containsAll(searchCourseExpected.get(i).
+                                get(j).conflictCourseNames)){
+                            System.out.println("Expected:");
+                            System.out.println(searchCourseExpected.get(i));
+                            System.out.println("Actually:");
+                            System.out.println(searchCourseResult.get(i));
+                            System.out.println("---------");
+                        }
+                    }
+
+                }
+            }*/
+
             result.passCount.addAndGet(IntStream.range(0, searchCourseParams.size()).parallel()
                     .filter(it -> searchCourseExpected.get(it).equals(searchCourseResult.get(it))).count());
         }
@@ -59,6 +89,7 @@ public final class ProjectJudge {
 
     public List<CourseSearchEntry> testSearchCourse(List<Object> params) {
         try {
+
             return studentService.searchCourse((int) params.get(0), importer.mapSemesterId((int) params.get(1)),
                     (String) params.get(2), (String) params.get(3), (String) params.get(4),
                     (DayOfWeek) params.get(5), shortValue(params.get(6)), (List<String>) params.get(7),
@@ -94,9 +125,15 @@ public final class ProjectJudge {
                 long beforeTime = System.nanoTime();
                 StudentService.EnrollResult result = testEnrollCourse(enrollCourseParams.get(i));
                 evalResult.elapsedTimeNs.addAndGet(System.nanoTime() - beforeTime);
+
                 if (expected == result) {
                     evalResult.passCount.incrementAndGet();
-                }
+                }/*else {
+                    System.out.println(enrollCourseParams.get(i));
+                    System.out.println("Here!");
+                    System.out.println("expected = " + expected);
+                    System.out.println("result = " + result);
+                }*/
                 if (expected == StudentService.EnrollResult.SUCCESS) {
                     evalResult.succeedSections.add(enrollCourseParams.get(i));
                 }
@@ -140,6 +177,7 @@ public final class ProjectJudge {
                     .mapToObj(it -> testCourseTable(courseTableParams.get(it)))
                     .collect(Collectors.toUnmodifiableList());
             result.elapsedTimeNs.addAndGet(System.nanoTime() - beforeTime);
+
             result.passCount.addAndGet(IntStream.range(0, courseTableParams.size()).parallel()
                     .filter(it -> courseTableExpected.get(it).equals(courseTableResults.get(it))).count());
         }
@@ -181,6 +219,10 @@ public final class ProjectJudge {
         } else {
             return null;
         }
+    }
+    public static void main(String[] args) {
+        ProjectJudge judge = new ProjectJudge();
+        judge.benchmark();
     }
 
     public void benchmark() {
@@ -275,10 +317,7 @@ public final class ProjectJudge {
 
     }
 
-    public static void main(String[] args) {
-        ProjectJudge judge = new ProjectJudge();
-        judge.benchmark();
-    }
+
 
     private static <T> T readValueFromFile(File file, Class<T> tClass) {
         ObjectMapper objectMapper = new ObjectMapper();
