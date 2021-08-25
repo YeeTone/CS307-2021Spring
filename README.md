@@ -1,4 +1,5 @@
 # CS307 Spring 2021 Database Project 2
+## 本次project的评分：95/100
 
 ## 1. Source code
 
